@@ -180,4 +180,4 @@ Este proyecto fue desarrollado específicamente para uso interno de **Carbon & C
 
 ---
 
-*Sistema desarrollado con ❤️ por AntiGravity IDE para Carbon & Cheddar Lota.*
+*Sistema desarrollado con ❤️ por Lilith para Carbon & Cheddar Lota.*
