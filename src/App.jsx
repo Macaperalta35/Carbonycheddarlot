@@ -1,21 +1,33 @@
 import React, { useState } from "react";
 import { initialMenu } from "./data/menu";
 import { useSupabaseData } from "./hooks/useSupabaseData";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 import { isConfigured } from "./lib/supabase";
-import CustomerView   from "./components/CustomerView";
-import POSView        from "./components/POSView";
-import InventoryView  from "./components/InventoryView";
-import ReportsView    from "./components/ReportsView";
-import EgresosView    from "./components/EgresosView";
-import ComprasView    from "./components/ComprasView";
+import CustomerView  from "./components/CustomerView";
+import POSView       from "./components/POSView";
+import InventoryView from "./components/InventoryView";
+import ReportsView   from "./components/ReportsView";
+import EgresosView   from "./components/EgresosView";
+import ComprasView   from "./components/ComprasView";
+import SettingsView  from "./components/SettingsView";
 
+// Tabs y los roles que pueden verlos
 const TABS = [
-  { id: "sales",     label: "Ventas",     icon: "🧾", adminOnly: false },
-  { id: "inventory", label: "Inventario", icon: "📦", adminOnly: true  },
-  { id: "egresos",   label: "Egresos",    icon: "💸", adminOnly: true  },
-  { id: "compras",   label: "Compras",    icon: "🛒", adminOnly: true  },
-  { id: "reports",   label: "Reportes",   icon: "📊", adminOnly: true  },
+  { id: "sales",     label: "Ventas",        icon: "🧾", roles: ["cajero", "admin", "superadmin"] },
+  { id: "inventory", label: "Inventario",    icon: "📦", roles: ["admin", "superadmin"] },
+  { id: "egresos",   label: "Egresos",       icon: "💸", roles: ["admin", "superadmin"] },
+  { id: "compras",   label: "Compras",       icon: "🛒", roles: ["admin", "superadmin"] },
+  { id: "reports",   label: "Reportes",      icon: "📊", roles: ["admin", "superadmin"] },
+  { id: "settings",  label: "Configuración", icon: "⚙️", roles: ["superadmin"] },
 ];
+
+const ROLE_META = {
+  cajero:     { label: "Cajero",       icon: "🧾", bg: "rgba(255,145,0,0.15)",  color: "#ff9100" },
+  admin:      { label: "Administrador",icon: "🔑", bg: "rgba(0,230,118,0.15)",  color: "#00e676" },
+  superadmin: { label: "Super Admin",  icon: "👑", bg: "rgba(124,77,255,0.15)", color: "#7c4dff" },
+};
+
+const DEFAULT_PINS = { admin: "1234", superadmin: "9999" };
 
 export default function App() {
   const [menu,    setMenu,    menuLoading]    = useSupabaseData("menu_items", "carbon_cheddar_menu_v1",    initialMenu, { orderBy: "category" });
@@ -23,39 +35,48 @@ export default function App() {
   const [egresos, setEgresos, egresosLoading] = useSupabaseData("egresos",    "carbon_cheddar_egresos_v1", [],          { orderBy: "timestamp" });
   const [compras, setCompras, comprasLoading] = useSupabaseData("compras",    "carbon_cheddar_compras_v1", [],          { orderBy: "timestamp" });
 
+  // PINs configurables, guardados en localStorage
+  const [pins, setPins] = useLocalStorage("carbon_cheddar_pins_v1", DEFAULT_PINS);
+
   const isLoading = isConfigured && (menuLoading || ordersLoading || egresosLoading || comprasLoading);
 
-  const [viewMode,  setViewMode]  = useState("staff");   // 'staff' | 'customer'
-  const [staffRole, setStaffRole] = useState("cajero");  // 'cajero' | 'admin'
+  const [viewMode,  setViewMode]  = useState("staff");
+  const [staffRole, setStaffRole] = useState("cajero");
   const [staffTab,  setStaffTab]  = useState("sales");
 
   // Modal de PIN
-  const [isPinOpen,  setIsPinOpen]  = useState(false);
-  const [pinInput,   setPinInput]   = useState("");
-  const [pinError,   setPinError]   = useState("");
+  const [pinTarget, setPinTarget] = useState(null); // 'admin' | 'superadmin'
+  const [pinInput,  setPinInput]  = useState("");
+  const [pinError,  setPinError]  = useState("");
 
   const handleRoleChange = (e) => {
-    if (e.target.value === "admin") {
-      setPinInput(""); setPinError("");
-      setIsPinOpen(true);
-    } else {
+    const next = e.target.value;
+    if (next === "cajero") {
       setStaffRole("cajero");
       setStaffTab("sales");
+    } else {
+      setPinInput("");
+      setPinError("");
+      setPinTarget(next);
     }
   };
 
   const handlePinSubmit = (e) => {
     e.preventDefault();
-    if (pinInput === "1234") {
-      setStaffRole("admin");
-      setIsPinOpen(false);
+    if (pinInput === pins[pinTarget]) {
+      setStaffRole(pinTarget);
+      setPinTarget(null);
       setPinInput("");
+      // Si la tab actual no es visible para el nuevo rol, ir a la primera visible
+      const nextTabs = TABS.filter(t => t.roles.includes(pinTarget));
+      if (!nextTabs.find(t => t.id === staffTab)) setStaffTab(nextTabs[0]?.id ?? "sales");
     } else {
-      setPinError("PIN incorrecto. (Simulación: 1234)");
+      setPinError("PIN incorrecto. Intenta de nuevo.");
     }
   };
 
-  const visibleTabs = TABS.filter(t => !t.adminOnly || staffRole === "admin");
+  const visibleTabs = TABS.filter(t => t.roles.includes(staffRole));
+  const meta = ROLE_META[staffRole];
 
   if (isLoading) {
     return (
@@ -72,7 +93,6 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Banner vista cliente */}
       {viewMode === "customer" && (
         <div className="simulation-banner fallback-print-hide">
           <span>🌐 Vista del Cliente — Pedido online para retirar en Lota</span>
@@ -88,20 +108,13 @@ export default function App() {
 
       {viewMode === "staff" && (
         <>
-          {/* Navbar */}
           <nav className="staff-navbar fallback-print-hide">
             <div className="nav-brand">
               <span className="nav-logo">🍔</span>
               <div>
                 <h1>Carbon &amp; Cheddar POS</h1>
-                <span
-                  className="role-badge"
-                  style={{
-                    backgroundColor: staffRole === "admin" ? "rgba(0,230,118,0.2)" : "rgba(255,145,0,0.2)",
-                    color:           staffRole === "admin" ? "#00e676" : "#ff9100",
-                  }}
-                >
-                  {staffRole === "admin" ? "⚙️ Administrador" : "🧾 Cajero"}
+                <span className="role-badge" style={{ backgroundColor: meta.bg, color: meta.color }}>
+                  {meta.icon} {meta.label}
                 </span>
               </div>
             </div>
@@ -127,8 +140,9 @@ export default function App() {
                   onChange={handleRoleChange}
                   className="select-role"
                 >
-                  <option value="cajero">Cajero</option>
-                  <option value="admin">Administrador</option>
+                  <option value="cajero">🧾 Cajero</option>
+                  <option value="admin">🔑 Administrador</option>
+                  <option value="superadmin">👑 Super Admin</option>
                 </select>
               </div>
               <button className="btn btn-primary btn-sm" onClick={() => setViewMode("customer")}>
@@ -137,7 +151,6 @@ export default function App() {
             </div>
           </nav>
 
-          {/* Vistas principales */}
           {staffTab === "sales" && (
             <POSView
               menu={menu} setMenu={setMenu}
@@ -145,52 +158,64 @@ export default function App() {
               currentUserRole={staffRole}
             />
           )}
-          {staffTab === "inventory" && staffRole === "admin" && (
+          {staffTab === "inventory" && ["admin","superadmin"].includes(staffRole) && (
             <InventoryView menu={menu} setMenu={setMenu} />
           )}
-          {staffTab === "egresos" && staffRole === "admin" && (
+          {staffTab === "egresos" && ["admin","superadmin"].includes(staffRole) && (
             <EgresosView egresos={egresos} setEgresos={setEgresos} />
           )}
-          {staffTab === "compras" && staffRole === "admin" && (
+          {staffTab === "compras" && ["admin","superadmin"].includes(staffRole) && (
             <ComprasView compras={compras} setCompras={setCompras} />
           )}
-          {staffTab === "reports" && staffRole === "admin" && (
+          {staffTab === "reports" && ["admin","superadmin"].includes(staffRole) && (
             <ReportsView menu={menu} orders={orders} egresos={egresos} compras={compras} />
+          )}
+          {staffTab === "settings" && staffRole === "superadmin" && (
+            <SettingsView pins={pins} setPins={setPins} />
           )}
         </>
       )}
 
-      {/* Modal PIN Administrador */}
-      {isPinOpen && (
+      {/* Modal PIN */}
+      {pinTarget && (
         <div className="modal-backdrop">
           <div className="modal-content pin-auth-modal fade-in">
-            <h2>🔐 Acceso Administrador</h2>
-            <p style={{ color: "var(--text-muted)" }}>Ingresa el PIN de seguridad para acceder al panel administrativo.</p>
+            <div className="pin-modal-header">
+              <span className="pin-modal-icon">
+                {pinTarget === "superadmin" ? "👑" : "🔑"}
+              </span>
+              <div>
+                <h2>{pinTarget === "superadmin" ? "Acceso Super Admin" : "Acceso Administrador"}</h2>
+                <p>Ingresa el PIN de seguridad para continuar.</p>
+              </div>
+            </div>
             <form onSubmit={handlePinSubmit}>
               <div className="form-group">
-                <label htmlFor="pin-input">PIN de Seguridad</label>
+                <label htmlFor="pin-input">PIN</label>
                 <input
                   id="pin-input"
                   type="password"
                   placeholder="••••"
                   value={pinInput}
                   onChange={e => { setPinInput(e.target.value); setPinError(""); }}
-                  maxLength={6}
+                  maxLength={8}
                   required
                   autoFocus
-                  style={{ textAlign: "center", fontSize: "1.8rem", letterSpacing: "12px" }}
+                  className="pin-input-field"
                 />
                 {pinError && (
-                  <p style={{ color: "var(--color-danger)", fontSize: "0.8rem", margin: "4px 0 0" }}>
-                    {pinError}
-                  </p>
+                  <p className="pin-error">{pinError}</p>
                 )}
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsPinOpen(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setPinTarget(null)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-success">
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{ background: pinTarget === "superadmin" ? "#7c4dff" : "var(--color-success)", color: "#fff" }}
+                >
                   Ingresar
                 </button>
               </div>
