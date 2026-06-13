@@ -1,38 +1,44 @@
 import React, { useState } from "react";
 import { initialMenu } from "./data/menu";
-import { useLocalStorage } from "./hooks/useLocalStorage";
-import CustomerView from "./components/CustomerView";
-import POSView from "./components/POSView";
-import InventoryView from "./components/InventoryView";
-import ReportsView from "./components/ReportsView";
+import { useSupabaseData } from "./hooks/useSupabaseData";
+import { isConfigured } from "./lib/supabase";
+import CustomerView   from "./components/CustomerView";
+import POSView        from "./components/POSView";
+import InventoryView  from "./components/InventoryView";
+import ReportsView    from "./components/ReportsView";
+import EgresosView    from "./components/EgresosView";
+import ComprasView    from "./components/ComprasView";
+
+const TABS = [
+  { id: "sales",     label: "Ventas",     icon: "🧾", adminOnly: false },
+  { id: "inventory", label: "Inventario", icon: "📦", adminOnly: true  },
+  { id: "egresos",   label: "Egresos",    icon: "💸", adminOnly: true  },
+  { id: "compras",   label: "Compras",    icon: "🛒", adminOnly: true  },
+  { id: "reports",   label: "Reportes",   icon: "📊", adminOnly: true  },
+];
 
 export default function App() {
-  const [menu, setMenu] = useLocalStorage("carbon_cheddar_menu_v1", initialMenu);
-  const [orders, setOrders] = useLocalStorage("carbon_cheddar_orders_v1", []);
-  
-  // Modos de Simulación: 'staff' (POS) | 'customer' (Página de pedidos)
-  const [viewMode, setViewMode] = useState("staff");
-  
-  // Roles de Staff: 'cajero' | 'admin'
-  const [staffRole, setStaffRole] = useState("cajero"); // 'cajero' por defecto para forzar login de admin
-  
-  // Pestañas activas en el panel de Staff: 'sales' | 'inventory' | 'reports'
-  const [staffTab, setStaffTab] = useState("sales");
+  const [menu,    setMenu,    menuLoading]    = useSupabaseData("menu_items", "carbon_cheddar_menu_v1",    initialMenu, { orderBy: "category" });
+  const [orders,  setOrders,  ordersLoading]  = useSupabaseData("orders",     "carbon_cheddar_orders_v1",  [],          { orderBy: "timestamp" });
+  const [egresos, setEgresos, egresosLoading] = useSupabaseData("egresos",    "carbon_cheddar_egresos_v1", [],          { orderBy: "timestamp" });
+  const [compras, setCompras, comprasLoading] = useSupabaseData("compras",    "carbon_cheddar_compras_v1", [],          { orderBy: "timestamp" });
 
-  // Estado para el modal de ingreso de PIN de Admin
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState("");
+  const isLoading = isConfigured && (menuLoading || ordersLoading || egresosLoading || comprasLoading);
 
-  const handleRoleSelectChange = (e) => {
-    const selectedRole = e.target.value;
-    if (selectedRole === "admin") {
-      // Abrir modal de PIN para ingresar como administrador
-      setPinInput("");
-      setPinError("");
-      setIsPinModalOpen(true);
+  const [viewMode,  setViewMode]  = useState("staff");   // 'staff' | 'customer'
+  const [staffRole, setStaffRole] = useState("cajero");  // 'cajero' | 'admin'
+  const [staffTab,  setStaffTab]  = useState("sales");
+
+  // Modal de PIN
+  const [isPinOpen,  setIsPinOpen]  = useState(false);
+  const [pinInput,   setPinInput]   = useState("");
+  const [pinError,   setPinError]   = useState("");
+
+  const handleRoleChange = (e) => {
+    if (e.target.value === "admin") {
+      setPinInput(""); setPinError("");
+      setIsPinOpen(true);
     } else {
-      // Cambiar directo a cajero (sin seguridad)
       setStaffRole("cajero");
       setStaffTab("sales");
     }
@@ -42,166 +48,150 @@ export default function App() {
     e.preventDefault();
     if (pinInput === "1234") {
       setStaffRole("admin");
-      setIsPinModalOpen(false);
+      setIsPinOpen(false);
       setPinInput("");
     } else {
-      setPinError("PIN incorrecto. Intenta con '1234' (PIN de simulación).");
+      setPinError("PIN incorrecto. (Simulación: 1234)");
     }
   };
 
+  const visibleTabs = TABS.filter(t => !t.adminOnly || staffRole === "admin");
+
+  if (isLoading) {
+    return (
+      <div className="app-loading-screen">
+        <div className="app-loading-content">
+          <div className="app-loading-logo">🍔</div>
+          <h2>Carbon &amp; Cheddar</h2>
+          <p>Cargando datos desde la nube…</p>
+          <div className="app-loading-spinner" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
-      {/* Banner de Simulación superior cuando se está en la vista del cliente */}
+      {/* Banner vista cliente */}
       {viewMode === "customer" && (
         <div className="simulation-banner fallback-print-hide">
-          <span>🌐 Vista del Cliente (Pedido online para retirar en Lota)</span>
-          <button 
-            className="btn btn-secondary btn-xs" 
-            onClick={() => setViewMode("staff")}
-          >
+          <span>🌐 Vista del Cliente — Pedido online para retirar en Lota</span>
+          <button className="btn btn-secondary btn-xs" onClick={() => setViewMode("staff")}>
             💻 Volver al POS del Personal
           </button>
         </div>
       )}
 
-      {/* Renderizado de la Vista del Cliente */}
       {viewMode === "customer" && (
-        <CustomerView 
-          menu={menu} 
-          setMenu={setMenu} 
-          orders={orders} 
-          setOrders={setOrders} 
-        />
+        <CustomerView menu={menu} setMenu={setMenu} orders={orders} setOrders={setOrders} />
       )}
 
-      {/* Renderizado de las Vistas del Personal (Staff POS) */}
       {viewMode === "staff" && (
         <>
-          {/* Navbar de Control y Simulación */}
+          {/* Navbar */}
           <nav className="staff-navbar fallback-print-hide">
             <div className="nav-brand">
               <span className="nav-logo">🍔</span>
               <div>
-                <h1>Carbon & Cheddar POS</h1>
-                <span className="role-badge" style={{ backgroundColor: staffRole === "admin" ? "rgba(0, 230, 118, 0.2)" : "rgba(255, 145, 0, 0.2)", color: staffRole === "admin" ? "#00e676" : "#ff9100" }}>
-                  Rol: {staffRole === "admin" ? "Administrador" : "Cajero"}
+                <h1>Carbon &amp; Cheddar POS</h1>
+                <span
+                  className="role-badge"
+                  style={{
+                    backgroundColor: staffRole === "admin" ? "rgba(0,230,118,0.2)" : "rgba(255,145,0,0.2)",
+                    color:           staffRole === "admin" ? "#00e676" : "#ff9100",
+                  }}
+                >
+                  {staffRole === "admin" ? "⚙️ Administrador" : "🧾 Cajero"}
                 </span>
               </div>
             </div>
 
-            {/* Pestañas (Filtradas por Rol) */}
             <div className="nav-tabs">
-              <button 
-                className={`nav-tab-btn ${staffTab === "sales" ? "active" : ""}`}
-                onClick={() => setStaffTab("sales")}
-              >
-                Ventas
-              </button>
-              {staffRole === "admin" && (
-                <>
-                  <button 
-                    className={`nav-tab-btn ${staffTab === "inventory" ? "active" : ""}`}
-                    onClick={() => setStaffTab("inventory")}
-                  >
-                    Inventario
-                  </button>
-                  <button 
-                    className={`nav-tab-btn ${staffTab === "reports" ? "active" : ""}`}
-                    onClick={() => setStaffTab("reports")}
-                  >
-                    Reportes
-                  </button>
-                </>
-              )}
+              {visibleTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`nav-tab-btn ${staffTab === tab.id ? "active" : ""}`}
+                  onClick={() => setStaffTab(tab.id)}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
             </div>
 
-            {/* Acciones del Simulador */}
             <div className="nav-actions">
-              {/* Selector de Rol */}
               <div className="role-selector-wrapper">
-                <label htmlFor="staff-role-select">Simular:</label>
-                <select 
+                <label htmlFor="staff-role-select">Modo:</label>
+                <select
                   id="staff-role-select"
-                  value={staffRole} 
-                  onChange={handleRoleSelectChange}
+                  value={staffRole}
+                  onChange={handleRoleChange}
                   className="select-role"
                 >
                   <option value="cajero">Cajero</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
-
-              {/* Botón para ver vista cliente */}
-              <button 
-                className="btn btn-primary btn-sm"
-                onClick={() => setViewMode("customer")}
-              >
+              <button className="btn btn-primary btn-sm" onClick={() => setViewMode("customer")}>
                 🌐 Ver Menú Cliente
               </button>
             </div>
           </nav>
 
-          {/* Vistas Principales */}
+          {/* Vistas principales */}
           {staffTab === "sales" && (
-            <POSView 
-              menu={menu} 
-              setMenu={setMenu} 
-              orders={orders} 
-              setOrders={setOrders}
+            <POSView
+              menu={menu} setMenu={setMenu}
+              orders={orders} setOrders={setOrders}
               currentUserRole={staffRole}
             />
           )}
-
           {staffTab === "inventory" && staffRole === "admin" && (
-            <InventoryView 
-              menu={menu} 
-              setMenu={setMenu} 
-            />
+            <InventoryView menu={menu} setMenu={setMenu} />
           )}
-
+          {staffTab === "egresos" && staffRole === "admin" && (
+            <EgresosView egresos={egresos} setEgresos={setEgresos} />
+          )}
+          {staffTab === "compras" && staffRole === "admin" && (
+            <ComprasView compras={compras} setCompras={setCompras} />
+          )}
           {staffTab === "reports" && staffRole === "admin" && (
-            <ReportsView 
-              menu={menu} 
-              orders={orders} 
-            />
+            <ReportsView menu={menu} orders={orders} egresos={egresos} compras={compras} />
           )}
         </>
       )}
 
-      {/* Modal de Ingreso de PIN de Seguridad para Administrador */}
-      {isPinModalOpen && (
+      {/* Modal PIN Administrador */}
+      {isPinOpen && (
         <div className="modal-backdrop">
           <div className="modal-content pin-auth-modal fade-in">
-            <h2>Acceso Administrador</h2>
-            <p>Se requiere PIN de seguridad para ingresar al panel administrativo:</p>
-            
+            <h2>🔐 Acceso Administrador</h2>
+            <p style={{ color: "var(--text-muted)" }}>Ingresa el PIN de seguridad para acceder al panel administrativo.</p>
             <form onSubmit={handlePinSubmit}>
               <div className="form-group">
-                <label htmlFor="pin-input">PIN de Seguridad *</label>
-                <input 
+                <label htmlFor="pin-input">PIN de Seguridad</label>
+                <input
                   id="pin-input"
-                  type="password" 
-                  placeholder="Ingrese PIN (Simulación: 1234)"
+                  type="password"
+                  placeholder="••••"
                   value={pinInput}
-                  onChange={(e) => { setPinInput(e.target.value); setPinError(""); }}
-                  maxLength="6"
+                  onChange={e => { setPinInput(e.target.value); setPinError(""); }}
+                  maxLength={6}
                   required
                   autoFocus
-                  style={{ textAlign: "center", fontSize: "1.5rem", letterSpacing: "8px" }}
+                  style={{ textAlign: "center", fontSize: "1.8rem", letterSpacing: "12px" }}
                 />
-                {pinError && <p className="text-danger" style={{ fontSize: "0.8rem", margin: "4px 0 0 0" }}>{pinError}</p>}
+                {pinError && (
+                  <p style={{ color: "var(--color-danger)", fontSize: "0.8rem", margin: "4px 0 0" }}>
+                    {pinError}
+                  </p>
+                )}
               </div>
-
               <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setIsPinModalOpen(false)}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => setIsPinOpen(false)}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-success">
-                  Validar PIN
+                  Ingresar
                 </button>
               </div>
             </form>

@@ -1,168 +1,162 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { btPrinter } from "../services/bluetoothPrinter";
 
 export default function POSView({ menu, setMenu, orders, setOrders, currentUserRole }) {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [ticketItems, setTicketItems] = useState([]);
-  const [selectedTable, setSelectedTable] = useState("Mesa 1");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [activeTab, setActiveTab] = useState("sales"); // 'sales' o 'online-orders'
-  
-  // Estado para modal de selección de variantes
+  const [activeCategory, setActiveCategory]   = useState("All");
+  const [searchQuery,    setSearchQuery]       = useState("");
+  const [ticketItems,    setTicketItems]       = useState([]);
+  const [selectedTable,  setSelectedTable]     = useState("Mesa 1");
+  const [discountPercent,setDiscountPercent]   = useState(0);
+  const [orderNotes,     setOrderNotes]        = useState("");
+  const [activeTab,      setActiveTab]         = useState("sales");
+
+  // Variantes
   const [variantModalItem, setVariantModalItem] = useState(null);
 
-  // Estado para editar ítem individual del ticket
-  const [editingTicketItem, setEditingTicketItem] = useState(null);
-  const [itemEditQty, setItemEditQty] = useState(1);
-  const [itemEditDiscount, setItemEditDiscount] = useState(0);
+  // Edición de ítem del ticket
+  const [editingItem,   setEditingItem]   = useState(null);
+  const [itemEditQty,   setItemEditQty]   = useState(1);
+  const [itemEditDisc,  setItemEditDisc]  = useState(0);
 
-  // Estados de cobro
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
-  const [cashAmount, setCashAmount] = useState("");
-  const [completedOrder, setCompletedOrder] = useState(null);
+  // Cobro
+  const [isCheckoutOpen,  setIsCheckoutOpen]  = useState(false);
+  const [paymentMethod,   setPaymentMethod]   = useState("Efectivo");
+  const [cashAmount,      setCashAmount]      = useState("");
+  const [completedOrder,  setCompletedOrder]  = useState(null);
+  const [btPrinting,      setBtPrinting]      = useState(false);
 
-  const tables = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Para Llevar"];
-  const categories = ["All", "Burgers", "Completos", "Almuerzos", "Niños", "Sides", "Drinks", "Desserts"];
-
-  // Filtrado de menú
-  const filteredMenu = menu.filter(item => {
-    const matchesCategory = activeCategory === "All" || item.category === activeCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+  // Estado de impresora Bluetooth
+  const [printerState, setPrinterState] = useState({
+    connected: btPrinter.connected,
+    name: btPrinter.name,
+    profile: btPrinter.profile,
   });
 
-  // Agregar al ticket actual
-  const addToTicket = (item, chosenVariant = null) => {
-    if (item.stock <= 0) {
-      alert("¡Este producto no tiene stock disponible!");
-      return;
-    }
+  useEffect(() => {
+    const unsub = btPrinter.subscribe(setPrinterState);
+    return unsub;
+  }, []);
 
-    // Si tiene variantes y no se ha escogido, abrir modal
+  const tables     = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Mesa 6", "Para Llevar"];
+  const categories = ["All", "Burgers", "Completos", "Almuerzos", "Niños", "Sides", "Drinks", "Desserts"];
+  const QUICK_CASH = [1000, 2000, 5000, 10000, 20000, 50000];
+
+  const filteredMenu = menu.filter(item => {
+    const matchCat    = activeCategory === "All" || item.category === activeCategory;
+    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  /* ─── Ticket ─────────────────────────────────────────────── */
+  const addToTicket = (item, chosenVariant = null) => {
+    if (item.stock <= 0) { alert("Sin stock disponible."); return; }
+
     if (item.variants && !chosenVariant) {
       setVariantModalItem(item);
       return;
     }
 
-    const finalId = chosenVariant ? `${item.id}_${chosenVariant.name}` : item.id;
-    const finalName = chosenVariant ? `${item.name} (${chosenVariant.name})` : item.name;
+    const finalId    = chosenVariant ? `${item.id}_${chosenVariant.name}` : item.id;
+    const finalName  = chosenVariant ? `${item.name} (${chosenVariant.name})` : item.name;
     const finalPrice = chosenVariant ? chosenVariant.price : item.price;
 
-    const existing = ticketItems.find(i => i.ticketId === finalId);
-    
-    // Validar contra stock total del producto base
     const totalQtyInTicket = ticketItems
       .filter(i => i.id === item.id)
-      .reduce((sum, i) => sum + i.qty, 0);
+      .reduce((s, i) => s + i.qty, 0);
 
     if (totalQtyInTicket >= item.stock) {
-      alert(`No hay suficiente stock en inventario de ${item.name} (${item.stock} u. máx).`);
+      alert(`Stock máximo alcanzado para ${item.name} (${item.stock} u.)`);
       return;
     }
 
+    const existing = ticketItems.find(i => i.ticketId === finalId);
     if (existing) {
-      setTicketItems(ticketItems.map(i => i.ticketId === finalId ? { ...i, qty: i.qty + 1 } : i));
+      setTicketItems(ticketItems.map(i =>
+        i.ticketId === finalId ? { ...i, qty: i.qty + 1 } : i
+      ));
     } else {
-      setTicketItems([...ticketItems, { 
-        ...item, 
-        ticketId: finalId, 
-        name: finalName, 
-        price: finalPrice, 
-        qty: 1,
-        variantName: chosenVariant ? chosenVariant.name : null,
-        itemDiscountPercent: 0 // 0% de descuento por defecto
+      setTicketItems([...ticketItems, {
+        ...item,
+        ticketId: finalId,
+        name:     finalName,
+        price:    finalPrice,
+        qty:      1,
+        itemDiscountPercent: 0,
       }]);
     }
-
     setVariantModalItem(null);
   };
 
-  // Abrir modal de edición de ítem
-  const openEditTicketItem = (item) => {
-    setEditingTicketItem(item);
-    setItemEditQty(item.qty);
-    setItemEditDiscount(item.itemDiscountPercent || 0);
-  };
-
-  // Guardar edición de ítem individual
-  const saveTicketItemEdit = (e) => {
-    e.preventDefault();
-    const menuItem = menu.find(i => i.id === editingTicketItem.id);
-    if (!menuItem) return;
-
-    // Calcular la cantidad de este mismo producto base en otras líneas del ticket
-    const otherQtyInTicket = ticketItems
-      .filter(i => i.id === editingTicketItem.id && i.ticketId !== editingTicketItem.ticketId)
-      .reduce((sum, i) => sum + i.qty, 0);
-
-    if (otherQtyInTicket + itemEditQty > menuItem.stock) {
-      alert(`No hay suficiente stock. Disponible: ${menuItem.stock} u. en total.`);
-      return;
-    }
-
-    setTicketItems(ticketItems.map(i => 
-      i.ticketId === editingTicketItem.ticketId 
-        ? { ...i, qty: itemEditQty, itemDiscountPercent: itemEditDiscount } 
-        : i
-    ));
-
-    setEditingTicketItem(null);
-  };
-
-  // Modificar cantidades del ticket rápidamente
   const updateTicketQty = (ticketId, change) => {
     const ticketItem = ticketItems.find(i => i.ticketId === ticketId);
-    const menuItem = menu.find(i => i.id === ticketItem.id);
+    const menuItem   = menu.find(i => i.id === ticketItem.id);
     if (!ticketItem || !menuItem) return;
 
     const newQty = ticketItem.qty + change;
     if (newQty <= 0) {
       setTicketItems(ticketItems.filter(i => i.ticketId !== ticketId));
-    } else {
-      // Validar contra stock total del producto base
-      const otherQtyInTicket = ticketItems
-        .filter(i => i.id === ticketItem.id && i.ticketId !== ticketId)
-        .reduce((sum, i) => sum + i.qty, 0);
-
-      if (otherQtyInTicket + newQty > menuItem.stock) {
-        alert(`Límite de stock alcanzado para ${menuItem.name}.`);
-        return;
-      }
-      setTicketItems(ticketItems.map(i => i.ticketId === ticketId ? { ...i, qty: newQty } : i));
+      return;
     }
+
+    const otherQty = ticketItems
+      .filter(i => i.id === ticketItem.id && i.ticketId !== ticketId)
+      .reduce((s, i) => s + i.qty, 0);
+
+    if (otherQty + newQty > menuItem.stock) {
+      alert(`Límite de stock: ${menuItem.name} (${menuItem.stock} u.)`);
+      return;
+    }
+    setTicketItems(ticketItems.map(i => i.ticketId === ticketId ? { ...i, qty: newQty } : i));
   };
 
-  // Eliminar ítem directo
-  const removeTicketItem = (ticketId) => {
+  const removeTicketItem = (ticketId) =>
     setTicketItems(ticketItems.filter(i => i.ticketId !== ticketId));
+
+  const openEditItem = (item) => {
+    setEditingItem(item);
+    setItemEditQty(item.qty);
+    setItemEditDisc(item.itemDiscountPercent || 0);
   };
 
-  // Detector de Combo Automático
-  const detectCombo = () => {
-    const hasBurger = ticketItems.some(i => i.category === "Burgers");
-    const hasSide = ticketItems.some(i => i.category === "Sides");
-    const hasDrink = ticketItems.some(i => i.category === "Drinks");
-    return hasBurger && hasSide && hasDrink;
+  const saveItemEdit = (e) => {
+    e.preventDefault();
+    const menuItem = menu.find(i => i.id === editingItem.id);
+    if (!menuItem) return;
+
+    const otherQty = ticketItems
+      .filter(i => i.id === editingItem.id && i.ticketId !== editingItem.ticketId)
+      .reduce((s, i) => s + i.qty, 0);
+
+    if (otherQty + itemEditQty > menuItem.stock) {
+      alert(`Stock insuficiente. Disponible: ${menuItem.stock} u.`);
+      return;
+    }
+
+    setTicketItems(ticketItems.map(i =>
+      i.ticketId === editingItem.ticketId
+        ? { ...i, qty: itemEditQty, itemDiscountPercent: itemEditDisc }
+        : i
+    ));
+    setEditingItem(null);
   };
 
-  const applyComboDiscount = () => {
-    setDiscountPercent(10);
-    alert("Se aplicó 10% de descuento por Combo (Hamburguesa + Acompañamiento + Bebida) 🍔🍟🥤");
-  };
+  /* ─── Combo ──────────────────────────────────────────────── */
+  const detectCombo = () =>
+    ticketItems.some(i => i.category === "Burgers") &&
+    ticketItems.some(i => i.category === "Sides")   &&
+    ticketItems.some(i => i.category === "Drinks");
 
-  // Cálculos de totales considerando descuentos individuales por línea
+  /* ─── Totales ─────────────────────────────────────────────── */
   const getLineSubtotal = (item) => {
-    const baseTotal = item.price * item.qty;
-    const discount = Math.round(baseTotal * ((item.itemDiscountPercent || 0) / 100));
-    return baseTotal - discount;
+    const base = item.price * item.qty;
+    return base - Math.round(base * ((item.itemDiscountPercent || 0) / 100));
   };
 
-  const subtotal = ticketItems.reduce((sum, item) => sum + getLineSubtotal(item), 0);
+  const subtotal       = ticketItems.reduce((s, i) => s + getLineSubtotal(i), 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const total = subtotal - discountAmount;
+  const total          = subtotal - discountAmount;
 
-  // Lógica de Cobro
+  /* ─── Cobro ───────────────────────────────────────────────── */
   const handleOpenCheckout = () => {
     if (ticketItems.length === 0) return;
     setIsCheckoutOpen(true);
@@ -172,150 +166,175 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
   const handleCheckoutComplete = () => {
     const cash = parseFloat(cashAmount);
     if (paymentMethod === "Efectivo" && (isNaN(cash) || cash < total)) {
-      alert("El monto de efectivo ingresado es insuficiente.");
+      alert("El monto de efectivo es insuficiente.");
       return;
     }
 
     const orderNumber = orders.length + 1;
-
-    // Crear la orden procesada
     const newOrder = {
-      id: Date.now(),
-      number: orderNumber,
-      type: selectedTable === "Para Llevar" ? "Llevar" : "Mesa",
-      table: selectedTable === "Para Llevar" ? "" : selectedTable,
-      items: ticketItems.map(i => ({
-        id: i.id,
-        ticketId: i.ticketId,
-        name: i.name,
-        price: i.price,
-        qty: i.qty,
-        emoji: i.emoji,
-        itemDiscountPercent: i.itemDiscountPercent || 0
+      id:            Date.now(),
+      number:        orderNumber,
+      type:          selectedTable === "Para Llevar" ? "Llevar" : "Mesa",
+      table:         selectedTable === "Para Llevar" ? "" : selectedTable,
+      items:         ticketItems.map(i => ({
+        id:   i.id, ticketId: i.ticketId, name: i.name,
+        price: i.price, qty: i.qty, emoji: i.emoji,
+        itemDiscountPercent: i.itemDiscountPercent || 0,
       })),
-      discount: discountAmount,
-      total: total,
+      discount:      discountAmount,
+      total:         total,
       paymentMethod: paymentMethod,
-      cashReceived: paymentMethod === "Efectivo" ? cash : null,
-      status: "Completado",
-      timestamp: Date.now()
+      cashReceived:  paymentMethod === "Efectivo" ? cash : null,
+      notes:         orderNotes.trim(),
+      status:        "Completado",
+      timestamp:     Date.now(),
     };
 
-    // Descontar del menú el stock de los productos base comprados
+    // Descontar stock
     const updatedMenu = menu.map(menuItem => {
-      // Sumar toda la cantidad comprada de este producto base en el ticket
-      const qtyPurchased = ticketItems
+      const qty = ticketItems
         .filter(i => i.id === menuItem.id)
-        .reduce((sum, i) => sum + i.qty, 0);
-
-      if (qtyPurchased > 0) {
-        return { ...menuItem, stock: Math.max(0, menuItem.stock - qtyPurchased) };
-      }
-      return menuItem;
+        .reduce((s, i) => s + i.qty, 0);
+      return qty > 0 ? { ...menuItem, stock: Math.max(0, menuItem.stock - qty) } : menuItem;
     });
 
     setMenu(updatedMenu);
     setOrders([...orders, newOrder]);
     setCompletedOrder(newOrder);
-    
-    // Limpiar estados
     setTicketItems([]);
     setDiscountPercent(0);
+    setOrderNotes("");
     setIsCheckoutOpen(false);
   };
 
-  // Procesar Pedidos Online Pendientes
-  const handleAcceptOnlineOrder = (orderId) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: "Preparando" } : order
-    ));
-  };
+  /* ─── Pedidos Online ─────────────────────────────────────── */
+  const handleAcceptOnline = (id) =>
+    setOrders(orders.map(o => o.id === id ? { ...o, status: "Preparando" } : o));
 
-  const handleCompleteOnlineOrder = (orderId, method) => {
-    const updatedOrders = orders.map(order => {
-      if (order.id === orderId) {
-        const orderComplete = { 
-          ...order, 
-          status: "Completado",
-          paymentMethod: method
-        };
-        setCompletedOrder(orderComplete);
-        return orderComplete;
+  const handleCompleteOnline = (id, method) => {
+    setOrders(orders.map(o => {
+      if (o.id === id) {
+        const done = { ...o, status: "Completado", paymentMethod: method };
+        setCompletedOrder(done);
+        return done;
       }
-      return order;
-    });
-    setOrders(updatedOrders);
+      return o;
+    }));
   };
 
-  const formatCLP = (value) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-      minimumFractionDigits: 0
-    }).format(value);
+  /* ─── Impresión Bluetooth ───────────────────────────────── */
+  const handleBTConnect = async () => {
+    try {
+      await btPrinter.connect();
+      alert(`Impresora conectada: ${btPrinter.name}`);
+    } catch (err) {
+      alert(`Error al conectar impresora:\n${err.message}`);
+    }
   };
+
+  const handleBTPrint = async (order) => {
+    if (!printerState.connected) {
+      alert("Impresora no conectada. Usa el botón \"Conectar Impresora\" primero.");
+      return;
+    }
+    setBtPrinting(true);
+    try {
+      await btPrinter.printReceipt(order);
+    } catch (err) {
+      alert(`Error al imprimir:\n${err.message}`);
+    } finally {
+      setBtPrinting(false);
+    }
+  };
+
+  /* ─── Formato ──────────────────────────────────────────── */
+  const formatCLP = (v) =>
+    new Intl.NumberFormat("es-CL", {
+      style: "currency", currency: "CLP", minimumFractionDigits: 0,
+    }).format(v);
 
   const onlineOrders = orders.filter(o => o.type === "Para Retirar" && o.status !== "Completado");
 
   return (
     <div className="pos-layout">
-      {/* Columna Izquierda: Ticket */}
+      {/* ── Panel Izquierdo: Ticket ─────────────────────────── */}
       <div className="pos-left-panel">
+        {/* Barra Bluetooth */}
+        <div className="printer-bar">
+          {printerState.connected ? (
+            <div className="printer-connected-pill">
+              🖨️ <span>{printerState.name}</span>
+              <button
+                className="btn btn-secondary btn-xs"
+                onClick={() => btPrinter.disconnect()}
+              >
+                Desconectar
+              </button>
+            </div>
+          ) : (
+            <button className="btn-printer-connect" onClick={handleBTConnect}>
+              {btPrinter.isSupported() ? "🖨️ Conectar Impresora BT" : "⚠️ BT no disponible en este navegador"}
+            </button>
+          )}
+        </div>
+
+        {/* Pestañas del panel izquierdo */}
         <div className="pos-tab-headers">
-          <button 
+          <button
             className={`tab-btn ${activeTab === "sales" ? "active" : ""}`}
             onClick={() => setActiveTab("sales")}
           >
             Ticket Actual
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === "online-orders" ? "active" : ""}`}
             onClick={() => setActiveTab("online-orders")}
           >
-            Pedidos Online {onlineOrders.length > 0 && <span className="online-badge">{onlineOrders.length}</span>}
+            Pedidos Online{onlineOrders.length > 0 && (
+              <span className="online-badge">{onlineOrders.length}</span>
+            )}
           </button>
         </div>
 
         {activeTab === "sales" ? (
           <div className="ticket-container">
-            {/* Cabecera de Mesa */}
+            {/* Mesa / Tipo */}
             <div className="ticket-meta">
-              <label htmlFor="table-select" className="sr-only">Seleccionar Mesa</label>
-              <select 
+              <label htmlFor="table-select" className="sr-only">Mesa</label>
+              <select
                 id="table-select"
                 value={selectedTable}
-                onChange={(e) => setSelectedTable(e.target.value)}
+                onChange={e => setSelectedTable(e.target.value)}
                 className="select-table"
               >
                 {tables.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <button 
-                className="btn-clear-ticket" 
-                onClick={() => { setTicketItems([]); setDiscountPercent(0); }}
+              <button
+                className="btn-clear-ticket"
+                onClick={() => { setTicketItems([]); setDiscountPercent(0); setOrderNotes(""); }}
                 disabled={ticketItems.length === 0}
               >
                 Limpiar
               </button>
             </div>
 
-            {/* Lista de Ticket */}
+            {/* Ítems del ticket */}
             <div className="ticket-items">
               {ticketItems.length === 0 ? (
                 <div className="ticket-empty">
                   <span>🛒</span>
-                  <p>Ticket vacío. Añade productos de la grilla.</p>
+                  <p>Ticket vacío. Agrega productos desde la grilla.</p>
                 </div>
               ) : (
                 ticketItems.map(item => {
-                  const lineSub = getLineSubtotal(item);
-                  const hasRowDiscount = item.itemDiscountPercent > 0;
-
+                  const lineSub   = getLineSubtotal(item);
+                  const hasDisc   = item.itemDiscountPercent > 0;
                   return (
                     <div key={item.ticketId} className="ticket-item-row">
-                      <div 
-                        className="ticket-item-info clickable-row" 
-                        onClick={() => openEditTicketItem(item)}
-                        title="Haz clic para aplicar descuento individual"
+                      <div
+                        className="ticket-item-info clickable-row"
+                        onClick={() => openEditItem(item)}
+                        title="Clic para editar descuento o cantidad"
                         style={{ cursor: "pointer" }}
                       >
                         <span className="item-emoji">{item.emoji}</span>
@@ -323,7 +342,9 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
                           <span className="item-name">{item.name}</span>
                           <span className="item-unit-price">
                             {formatCLP(item.price)} c/u
-                            {hasRowDiscount && <span className="text-warning"> (-{item.itemDiscountPercent}%)</span>}
+                            {hasDisc && (
+                              <span className="text-warning"> (-{item.itemDiscountPercent}%)</span>
+                            )}
                           </span>
                         </div>
                       </div>
@@ -332,15 +353,11 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
                         <span className="qty-text">{item.qty}</span>
                         <button className="btn-qty" onClick={() => updateTicketQty(item.ticketId, 1)}>+</button>
                         <span className="item-subtotal">{formatCLP(lineSub)}</span>
-                        
-                        {/* Botón de eliminación directa */}
-                        <button 
+                        <button
                           className="btn-delete-row"
                           onClick={() => removeTicketItem(item.ticketId)}
-                          title="Eliminar de boleta"
-                        >
-                          🗑️
-                        </button>
+                          title="Eliminar"
+                        >🗑️</button>
                       </div>
                     </div>
                   );
@@ -348,11 +365,14 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
               )}
             </div>
 
-            {/* Banner de Combo */}
+            {/* Banner Combo */}
             {detectCombo() && discountPercent === 0 && (
               <div className="combo-banner pulse">
                 <span>🔥 ¡Combo Detectado!</span>
-                <button className="btn btn-warning btn-xs" onClick={applyComboDiscount}>
+                <button
+                  className="btn btn-warning btn-xs"
+                  onClick={() => { setDiscountPercent(10); alert("10% de descuento aplicado por Combo 🍔🍟🥤"); }}
+                >
                   Aplicar 10% Desc.
                 </button>
               </div>
@@ -361,36 +381,43 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
             {/* Resumen */}
             <div className="ticket-summary">
               <div className="summary-row">
-                <span>Subtotal (con desc. por ítem):</span>
+                <span>Subtotal (con desc. ítem):</span>
                 <span>{formatCLP(subtotal)}</span>
               </div>
               <div className="summary-row discount-row">
-                <span>Descuento General (%):</span>
+                <span>Desc. general:</span>
                 <div className="discount-input-wrapper">
-                  <label htmlFor="discount-select" className="sr-only">Descuento General</label>
-                  <select 
-                    id="discount-select"
-                    value={discountPercent} 
-                    onChange={(e) => setDiscountPercent(parseInt(e.target.value))}
+                  <label htmlFor="disc-select" className="sr-only">Descuento General</label>
+                  <select
+                    id="disc-select"
+                    value={discountPercent}
+                    onChange={e => setDiscountPercent(parseInt(e.target.value))}
                     className="select-discount"
                   >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="20">20%</option>
+                    {[0,5,10,15,20,25,30].map(v => (
+                      <option key={v} value={v}>{v}%</option>
+                    ))}
                   </select>
                   <span>-{formatCLP(discountAmount)}</span>
                 </div>
               </div>
               <div className="summary-row total-row">
-                <span>TOTAL (19% IVA Incl.):</span>
+                <span>TOTAL (IVA inc.):</span>
                 <span>{formatCLP(total)}</span>
               </div>
+
+              {/* Notas de la orden */}
+              <input
+                type="text"
+                className="ticket-notes-input"
+                placeholder="Notas para cocina (opcional)..."
+                value={orderNotes}
+                onChange={e => setOrderNotes(e.target.value)}
+              />
             </div>
 
-            <button 
-              className="btn btn-success btn-block btn-pay" 
+            <button
+              className="btn btn-success btn-block btn-pay"
               onClick={handleOpenCheckout}
               disabled={ticketItems.length === 0}
             >
@@ -408,20 +435,21 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
             ) : (
               <div className="online-orders-list">
                 {onlineOrders.map(order => (
-                  <div key={order.id} className={`online-order-card ${order.status === "Preparando" ? "preparing" : "pending"}`}>
+                  <div
+                    key={order.id}
+                    className={`online-order-card ${order.status === "Preparando" ? "preparing" : "pending"}`}
+                  >
                     <div className="online-card-header">
                       <span className="order-number-badge">PEDIDO #{order.number}</span>
                       <span className={`status-badge status-${order.status.toLowerCase()}`}>
                         {order.status}
                       </span>
                     </div>
-                    
                     <div className="online-card-client">
                       <p><strong>Cliente:</strong> {order.customerName}</p>
                       <p><strong>Fono:</strong> {order.phone}</p>
-                      <p><strong>Retira en:</strong> {order.pickupTime}</p>
+                      <p><strong>Retira:</strong> {order.pickupTime}</p>
                     </div>
-
                     <div className="online-card-items">
                       {order.items.map((i, idx) => (
                         <div key={idx} className="online-item-line">
@@ -430,33 +458,25 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
                         </div>
                       ))}
                     </div>
-
                     <div className="online-card-total">
                       <span>Total:</span>
                       <strong>{formatCLP(order.total)}</strong>
                     </div>
-
                     <div className="online-card-actions">
                       {order.status === "Pendiente" ? (
-                        <button 
+                        <button
                           className="btn btn-warning btn-block"
-                          onClick={() => handleAcceptOnlineOrder(order.id)}
+                          onClick={() => handleAcceptOnline(order.id)}
                         >
                           Aceptar y Preparar
                         </button>
                       ) : (
                         <div className="split-buttons">
-                          <button 
-                            className="btn btn-success"
-                            onClick={() => handleCompleteOnlineOrder(order.id, "Efectivo")}
-                          >
-                            Entregar y Cobrar (Efectivo)
+                          <button className="btn btn-success" onClick={() => handleCompleteOnline(order.id, "Efectivo")}>
+                            Entregar (Efectivo)
                           </button>
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleCompleteOnlineOrder(order.id, "Tarjeta")}
-                          >
-                            Cobrar (Tarjeta/Trans.)
+                          <button className="btn btn-primary" onClick={() => handleCompleteOnline(order.id, "Tarjeta")}>
+                            Cobrar (Tarjeta)
                           </button>
                         </div>
                       )}
@@ -469,16 +489,16 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
         )}
       </div>
 
-      {/* Columna Derecha: Menú Cuadrícula */}
+      {/* ── Panel Derecho: Grilla de Menú ──────────────────── */}
       <div className="pos-menu-panel">
         <div className="menu-header-controls">
           <div className="search-bar">
             <span className="search-icon">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Buscar producto..." 
+            <input
+              type="text"
+              placeholder="Buscar producto..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
               <button className="btn-clear-search" onClick={() => setSearchQuery("")}>×</button>
@@ -500,34 +520,29 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
 
         <div className="pos-products-grid">
           {filteredMenu.map(item => {
-            // Calcular stock disponible considerando lo que hay en ticket de este producto base
-            const qtyInTicket = ticketItems
-              .filter(i => i.id === item.id)
-              .reduce((sum, i) => sum + i.qty, 0);
-            
-            const availableStock = Math.max(0, item.stock - qtyInTicket);
-            const isOutOfStock = availableStock <= 0;
-            const hasLowStock = availableStock > 0 && availableStock < 5;
+            const qtyInTicket   = ticketItems.filter(i => i.id === item.id).reduce((s, i) => s + i.qty, 0);
+            const available     = Math.max(0, item.stock - qtyInTicket);
+            const isOut         = available <= 0;
+            const isLow         = !isOut && available < 5;
 
             return (
               <button
                 key={item.id}
-                className={`pos-product-card ${isOutOfStock ? "out-of-stock" : ""}`}
+                className={`pos-product-card ${isOut ? "out-of-stock" : ""}`}
                 onClick={() => addToTicket(item)}
-                disabled={isOutOfStock}
+                disabled={isOut}
               >
                 <span className="item-emoji">{item.emoji}</span>
                 <span className="item-name">{item.name}</span>
                 <span className="item-price">
-                  {item.variants ? `${formatCLP(item.price)}+` : formatCLP(item.price)}
+                  {item.variants ? `Desde ${formatCLP(item.price)}` : formatCLP(item.price)}
                 </span>
-                
-                {isOutOfStock ? (
+                {isOut ? (
                   <span className="stock-badge stock-critical">Sin Stock</span>
-                ) : hasLowStock ? (
-                  <span className="stock-badge stock-warn">Aviso: {availableStock} u.</span>
+                ) : isLow ? (
+                  <span className="stock-badge stock-warn">¡Solo {available}!</span>
                 ) : (
-                  <span className="stock-badge stock-normal">Stock: {availableStock}</span>
+                  <span className="stock-badge stock-normal">{available} u.</span>
                 )}
               </button>
             );
@@ -535,16 +550,16 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
         </div>
       </div>
 
-      {/* Modal: Selección de Variantes (Tamaños Papas Fritas) */}
+      {/* ── Modal: Variantes ──────────────────────────────── */}
       {variantModalItem && (
         <div className="modal-backdrop">
           <div className="modal-content variant-select-modal fade-in">
             <h2>Seleccionar Tamaño</h2>
             <p>Elige el tamaño para <strong>{variantModalItem.name}</strong>:</p>
             <div className="variant-options-list">
-              {variantModalItem.variants.map((v, index) => (
-                <button 
-                  key={index} 
+              {variantModalItem.variants.map((v, i) => (
+                <button
+                  key={i}
                   className="variant-option-card"
                   onClick={() => addToTicket(variantModalItem, v)}
                 >
@@ -565,68 +580,58 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
         </div>
       )}
 
-      {/* Modal: Editar Ítem del Ticket (Descuento/Cantidad individual) */}
-      {editingTicketItem && (
+      {/* ── Modal: Editar ítem ────────────────────────────── */}
+      {editingItem && (
         <div className="modal-backdrop">
           <div className="modal-content ticket-item-edit-modal fade-in">
-            <h2>Modificar Ítem en Ticket</h2>
-            <form onSubmit={saveTicketItemEdit}>
+            <h2>Modificar Ítem</h2>
+            <form onSubmit={saveItemEdit}>
               <div className="modal-body">
-                <p className="edit-item-title"><strong>{editingTicketItem.name}</strong></p>
-                
+                <p style={{ fontWeight: 700, fontSize: "1rem", margin: "0 0 16px 0" }}>
+                  {editingItem.emoji} {editingItem.name}
+                </p>
                 <div className="form-group">
-                  <label htmlFor="edit-item-qty">Cantidad</label>
+                  <label>Cantidad</label>
                   <div className="qty-edit-wrapper">
-                    <button 
-                      type="button" 
-                      className="btn-qty-big" 
+                    <button
+                      type="button"
+                      className="btn-qty-big"
                       onClick={() => setItemEditQty(Math.max(1, itemEditQty - 1))}
                     >-</button>
-                    <input 
-                      id="edit-item-qty"
-                      type="number" 
+                    <input
+                      type="number"
                       value={itemEditQty}
-                      onChange={(e) => setItemEditQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={e => setItemEditQty(Math.max(1, parseInt(e.target.value) || 1))}
                       min="1"
                       className="edit-qty-input"
                     />
-                    <button 
-                      type="button" 
-                      className="btn-qty-big" 
+                    <button
+                      type="button"
+                      className="btn-qty-big"
                       onClick={() => setItemEditQty(itemEditQty + 1)}
                     >+</button>
                   </div>
                 </div>
-
                 <div className="form-group">
-                  <label htmlFor="edit-item-discount">Descuento Individual (%)</label>
-                  <select 
-                    id="edit-item-discount"
-                    value={itemEditDiscount}
-                    onChange={(e) => setItemEditDiscount(parseInt(e.target.value))}
+                  <label>Descuento Individual</label>
+                  <select
+                    value={itemEditDisc}
+                    onChange={e => setItemEditDisc(parseInt(e.target.value))}
                     className="select-item-discount"
                   >
-                    <option value="0">Sin Descuento (0%)</option>
-                    <option value="5">5% de Descuento</option>
-                    <option value="10">10% de Descuento</option>
-                    <option value="15">15% de Descuento</option>
-                    <option value="20">20% de Descuento</option>
-                    <option value="25">25% de Descuento</option>
-                    <option value="50">50% de Descuento (Mitad de Precio)</option>
+                    <option value={0}>Sin descuento</option>
+                    {[5,10,15,20,25,30,50].map(v => (
+                      <option key={v} value={v}>{v}% de descuento</option>
+                    ))}
                   </select>
                 </div>
               </div>
-
               <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setEditingTicketItem(null)}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-success">
-                  Aplicar Cambios
+                  Aplicar
                 </button>
               </div>
             </form>
@@ -634,12 +639,11 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
         </div>
       )}
 
-      {/* Modal de Cobro */}
+      {/* ── Modal: Cobro ──────────────────────────────────── */}
       {isCheckoutOpen && (
         <div className="modal-backdrop">
           <div className="modal-content checkout-modal fade-in">
             <h2>Pagar Ticket</h2>
-            
             <div className="modal-body">
               <div className="checkout-summary-box">
                 <span className="label">Total a Pagar:</span>
@@ -649,45 +653,43 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
               <div className="form-group">
                 <label>Método de Pago</label>
                 <div className="payment-method-selector">
-                  <button 
-                    className={`method-btn ${paymentMethod === "Efectivo" ? "active" : ""}`}
-                    onClick={() => { setPaymentMethod("Efectivo"); setCashAmount(total.toString()); }}
-                  >
-                    💵 Efectivo
-                  </button>
-                  <button 
-                    className={`method-btn ${paymentMethod === "Tarjeta" ? "active" : ""}`}
-                    onClick={() => { setPaymentMethod("Tarjeta"); setCashAmount(""); }}
-                  >
-                    💳 Tarjeta
-                  </button>
-                  <button 
-                    className={`method-btn ${paymentMethod === "Transferencia" ? "active" : ""}`}
-                    onClick={() => { setPaymentMethod("Transferencia"); setCashAmount(""); }}
-                  >
-                    🏦 Transferencia
-                  </button>
+                  {[
+                    { key: "Efectivo",      icon: "💵" },
+                    { key: "Tarjeta",       icon: "💳" },
+                    { key: "Transferencia", icon: "🏦" },
+                    { key: "QR / Webpay",   icon: "📲" },
+                  ].map(({ key, icon }) => (
+                    <button
+                      key={key}
+                      className={`method-btn ${paymentMethod === key ? "active" : ""}`}
+                      onClick={() => {
+                        setPaymentMethod(key);
+                        setCashAmount(key === "Efectivo" ? total.toString() : "");
+                      }}
+                    >
+                      {icon} {key}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {paymentMethod === "Efectivo" && (
                 <div className="cash-calculator">
                   <div className="form-group">
-                    <label htmlFor="cash-input">Efectivo Recibido (CLP)</label>
-                    <input 
-                      id="cash-input"
-                      type="number" 
+                    <label>Efectivo Recibido (CLP)</label>
+                    <input
+                      type="number"
                       value={cashAmount}
-                      onChange={(e) => setCashAmount(e.target.value)}
-                      placeholder="Ingrese monto recibido"
+                      onChange={e => setCashAmount(e.target.value)}
+                      placeholder="Monto recibido"
                       className="cash-input"
+                      autoFocus
                     />
                   </div>
-                  
                   <div className="quick-cash-buttons">
-                    {[5000, 10000, 20000].map(val => (
-                      <button 
-                        key={val} 
+                    {QUICK_CASH.map(val => (
+                      <button
+                        key={val}
                         className="btn-quick-cash"
                         onClick={() => setCashAmount(val.toString())}
                       >
@@ -695,7 +697,6 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
                       </button>
                     ))}
                   </div>
-
                   {parseFloat(cashAmount) >= total && (
                     <div className="change-result success-box">
                       <span>Vuelto a entregar:</span>
@@ -710,8 +711,8 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
               <button className="btn btn-secondary" onClick={() => setIsCheckoutOpen(false)}>
                 Cancelar
               </button>
-              <button 
-                className="btn btn-success" 
+              <button
+                className="btn btn-success"
                 onClick={handleCheckoutComplete}
                 disabled={paymentMethod === "Efectivo" && parseFloat(cashAmount) < total}
               >
@@ -722,47 +723,68 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
         </div>
       )}
 
-      {/* Modal de Impresión de Boleta */}
+      {/* ── Modal: Boleta / Recibo ────────────────────────── */}
       {completedOrder && (
         <div className="modal-backdrop">
           <div className="modal-content receipt-modal fade-in">
-            <h2>Boleta Registrada</h2>
-            <p>Venta exitosa. Formato de impresión oficial:</p>
+            <h2>✅ Venta Registrada</h2>
+            <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
+              Pedido #{completedOrder.number} — {completedOrder.type} {completedOrder.table}
+            </p>
 
+            {/* Vista previa boleta */}
             <div className="receipt-preview text-receipt">
-              PEDIDO #{completedOrder.number} | {completedOrder.type} {completedOrder.table}
+              {"═══════════════════════════\n"}
+              {"  CARBON & CHEDDAR - LOTA  \n"}
+              {"═══════════════════════════\n"}
+              {`Pedido #${completedOrder.number} | ${completedOrder.type} ${completedOrder.table}\n`}
+              {new Date().toLocaleDateString("es-CL")} {new Date().toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit"})}
+              {"\n───────────────────────────\n"}
               {completedOrder.items.map((i, idx) => {
-                const lineDiscount = i.itemDiscountPercent > 0;
-                const baseTotal = i.price * i.qty;
-                const finalLineTotal = baseTotal - Math.round(baseTotal * (i.itemDiscountPercent / 100));
-                
+                const base  = i.price * i.qty;
+                const disc  = Math.round(base * ((i.itemDiscountPercent || 0) / 100));
+                const final = base - disc;
                 return (
                   <React.Fragment key={idx}>
-                    {"\n"}{i.emoji} {i.name} x{i.qty} ........... {formatCLP(baseTotal)}
-                    {lineDiscount && (
-                      <>
-                        {"\n"}   (Desc. -{i.itemDiscountPercent}%) ............................ -{formatCLP(Math.round(baseTotal * (i.itemDiscountPercent / 100)))}
-                        {"\n"}   Subtotal Ítem ........................ {formatCLP(finalLineTotal)}
-                      </>
-                    )}
+                    {`${i.emoji} ${i.name} x${i.qty}  ${formatCLP(final)}\n`}
+                    {disc > 0 && `   Desc.-${i.itemDiscountPercent}%  -${formatCLP(disc)}\n`}
                   </React.Fragment>
                 );
               })}
-              {"\n"}─────────────────────────
-              {completedOrder.discount > 0 && (
-                <>
-                  {"\n"}DESCUENTO GENERAL: -{formatCLP(completedOrder.discount)}
-                </>
-              )}
-              {"\n"}TOTAL: {formatCLP(completedOrder.total)} | Pago: {completedOrder.paymentMethod}
+              {"───────────────────────────\n"}
+              {completedOrder.discount > 0 && `Desc. Gral: -${formatCLP(completedOrder.discount)}\n`}
+              {`TOTAL: ${formatCLP(completedOrder.total)}\n`}
+              {`Pago: ${completedOrder.paymentMethod}\n`}
+              {completedOrder.cashReceived && `Vuelto: ${formatCLP(completedOrder.cashReceived - completedOrder.total)}\n`}
+              {completedOrder.notes && `Notas: ${completedOrder.notes}\n`}
+              {"═══════════════════════════\n"}
+              {"  Precios incluyen 19% IVA \n"}
+              {"  ¡Gracias por su visita!  \n"}
             </div>
 
-            <div className="modal-actions">
-              <button className="btn btn-primary" onClick={() => window.print()}>
-                🖨️ Imprimir Ticket (Simulado)
+            <div className="modal-actions" style={{ flexWrap: "wrap" }}>
+              {/* Imprimir por ventana (browser) */}
+              <button className="btn btn-secondary" onClick={() => window.print()}>
+                🖨️ Imprimir (Browser)
               </button>
+
+              {/* Imprimir por Bluetooth */}
+              {printerState.connected ? (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleBTPrint(completedOrder)}
+                  disabled={btPrinting}
+                >
+                  {btPrinting ? "⏳ Imprimiendo..." : `🖨️ Imprimir BT (${printerState.name})`}
+                </button>
+              ) : (
+                <button className="btn btn-secondary" onClick={handleBTConnect}>
+                  🖨️ Conectar Impresora BT
+                </button>
+              )}
+
               <button className="btn btn-success" onClick={() => setCompletedOrder(null)}>
-                Listo / Nueva Venta
+                ✓ Listo / Nueva Venta
               </button>
             </div>
           </div>
