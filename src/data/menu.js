@@ -345,6 +345,12 @@ export const initialMenu = [
     description: "Té caliente a elección.",
     stock: 99, variants: []
   },
+  {
+    id: "beb-04", name: "Refreskid en Sobre", price: 500,
+    category: "Bebidas & Café", emoji: "🥤",
+    description: "Refreskid en sobre.",
+    stock: 99, variants: []
+  },
 
   // ── EXTRAS HAMBURGUESAS ──────────────────────────────────────
   {
