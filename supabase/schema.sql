@@ -88,15 +88,19 @@ ALTER TABLE public.egresos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.compras    ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: acceso completo para la clave anónima
+DROP POLICY IF EXISTS "anon_all_menu_items" ON public.menu_items;
 CREATE POLICY "anon_all_menu_items" ON public.menu_items
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "anon_all_orders" ON public.orders;
 CREATE POLICY "anon_all_orders" ON public.orders
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "anon_all_egresos" ON public.egresos;
 CREATE POLICY "anon_all_egresos" ON public.egresos
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "anon_all_compras" ON public.compras;
 CREATE POLICY "anon_all_compras" ON public.compras
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
