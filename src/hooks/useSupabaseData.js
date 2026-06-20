@@ -10,7 +10,7 @@ import { useLocalStorage } from './useLocalStorage';
  * Igual que useLocalStorage:  setData(newArray)  o  setData(prev => [...prev, item])
  */
 export function useSupabaseData(tableName, localKey, initialData = [], options = {}) {
-  const { orderBy = 'created_at', orderAsc = false } = options;
+  const { orderBy = 'created_at', orderAsc = false, mergeSchema = false } = options;
 
   // ─── Fallback a localStorage si Supabase no está configurado ──
   const [lsData, setLsData] = useLocalStorage(localKey, initialData);
@@ -37,9 +37,34 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
       }
 
       if (rows && rows.length > 0) {
-        // Tabla tiene datos → usar los de Supabase
-        setSbData(rows);
-        prevRef.current = rows;
+        if (mergeSchema && initialData.length > 0) {
+          // mergeSchema: actualiza nombre/precio/categoría/etc. desde initialData,
+          // pero conserva el stock actual de Supabase
+          const rowMap = new Map(rows.map(r => [String(r.id), r]));
+          const merged = initialData.map(init => ({
+            ...init,
+            stock: rowMap.has(String(init.id)) ? rowMap.get(String(init.id)).stock : init.stock,
+          }));
+
+          // Detectar ítems nuevos o con metadata cambiada (sin comparar stock)
+          const toUpsert = merged.filter(item => {
+            const ex = rowMap.get(String(item.id));
+            if (!ex) return true;
+            const schemaKeys = Object.keys(item).filter(k => k !== 'stock');
+            return schemaKeys.some(k => JSON.stringify(item[k]) !== JSON.stringify(ex[k]));
+          });
+
+          if (toUpsert.length > 0) {
+            await supabase.from(tableName).upsert(toUpsert, { onConflict: 'id' });
+          }
+
+          setSbData(merged);
+          prevRef.current = merged;
+        } else {
+          // Comportamiento normal: usar datos de Supabase tal cual
+          setSbData(rows);
+          prevRef.current = rows;
+        }
       } else if (initialData.length > 0) {
         // Tabla vacía + hay datos iniciales → sembrar (seed)
         const { error: seedErr } = await supabase
@@ -54,6 +79,7 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
       }
 
       setLoading(false);
+
       readyRef.current = true;
     };
 

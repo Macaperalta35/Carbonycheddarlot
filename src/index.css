@@ -2847,3 +2847,164 @@ body {
 .explosion-sub   { font-size: 0.78rem; color: var(--text-muted); }
 .val-up   { color: #00e676; }
 .val-down { color: var(--color-danger); }
+
+/* ═══════════════════════════════════════════════════════════════
+   WIDGET DE ACCESIBILIDAD
+   ═══════════════════════════════════════════════════════════════ */
+
+.a11y-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.a11y-fab {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.a11y-fab:hover  { transform: scale(1.08); background: var(--primary-hover); }
+.a11y-fab:focus  { outline: 3px solid #fff; outline-offset: 2px; }
+
+.a11y-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  min-width: 240px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.a11y-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.a11y-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: color var(--transition-fast);
+}
+.a11y-close:hover  { color: var(--text-main); }
+.a11y-close:focus  { outline: 2px solid var(--primary); }
+
+.a11y-section { display: flex; flex-direction: column; gap: 8px; }
+
+.a11y-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.a11y-font-group {
+  display: flex;
+  gap: 6px;
+}
+.a11y-font-group button {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: all var(--transition-fast);
+}
+.a11y-font-group button:hover  { border-color: var(--primary); color: var(--text-main); }
+.a11y-font-group button.active { background: rgba(255,87,34,0.15); border-color: var(--primary); color: var(--primary); }
+.a11y-font-group button:focus  { outline: 2px solid var(--primary); }
+
+.a11y-toggle-contrast,
+.a11y-reset {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+.a11y-toggle-contrast:hover,
+.a11y-reset:hover { border-color: var(--primary); }
+.a11y-toggle-contrast:focus,
+.a11y-reset:focus { outline: 2px solid var(--primary); }
+
+.a11y-toggle-contrast.active {
+  background: rgba(255,193,7,0.15);
+  border-color: #ffc107;
+  color: #ffc107;
+}
+
+.a11y-reset {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.a11y-reset:hover { color: var(--text-main); }
+
+/* ── Modos de accesibilidad aplicados al documento ─────────────── */
+
+html.a11y-large  { font-size: 18px; }
+html.a11y-xlarge { font-size: 22px; }
+
+html.a11y-contrast {
+  --bg-dark:     #000000;
+  --bg-card:     #0d0d0d;
+  --bg-input:    #1a1a1a;
+  --border-color: rgba(255,255,255,0.3);
+  --text-main:   #ffffff;
+  --text-muted:  #cccccc;
+  --primary:     #ff6d00;
+  --color-success: #00ff88;
+  --color-warning: #ffd600;
+  --color-danger:  #ff4444;
+}
+
+html.a11y-contrast .pos-product-card {
+  border: 1px solid rgba(255,255,255,0.25) !important;
+}
+html.a11y-contrast .category-pill {
+  border: 1px solid rgba(255,255,255,0.2) !important;
+}
+html.a11y-contrast .category-pill.active {
+  background: #ff6d00 !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+}

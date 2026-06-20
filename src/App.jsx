@@ -9,7 +9,8 @@ import InventoryView from "./components/InventoryView";
 import ReportsView   from "./components/ReportsView";
 import EgresosView   from "./components/EgresosView";
 import ComprasView   from "./components/ComprasView";
-import SettingsView  from "./components/SettingsView";
+import SettingsView           from "./components/SettingsView";
+import AccessibilityWidget   from "./components/AccessibilityWidget";
 
 // Tabs y los roles que pueden verlos
 const TABS = [
@@ -30,7 +31,7 @@ const ROLE_META = {
 const DEFAULT_PINS = { admin: "1234", superadmin: "9999" };
 
 export default function App() {
-  const [menu,    setMenu,    menuLoading]    = useSupabaseData("menu_items", "carbon_cheddar_menu_v1",    initialMenu, { orderBy: "category" });
+  const [menu,    setMenu,    menuLoading]    = useSupabaseData("menu_items", "carbon_cheddar_menu_v1",    initialMenu, { orderBy: "category", mergeSchema: true });
   const [orders,  setOrders,  ordersLoading]  = useSupabaseData("orders",     "carbon_cheddar_orders_v1",  [],          { orderBy: "timestamp" });
   const [egresos, setEgresos, egresosLoading] = useSupabaseData("egresos",    "carbon_cheddar_egresos_v1", [],          { orderBy: "timestamp" });
   const [compras, setCompras, comprasLoading] = useSupabaseData("compras",    "carbon_cheddar_compras_v1", [],          { orderBy: "timestamp" });
@@ -175,6 +176,9 @@ export default function App() {
           )}
         </>
       )}
+
+      {/* Widget de Accesibilidad — siempre visible */}
+      <AccessibilityWidget />
 
       {/* Modal PIN */}
       {pinTarget && (
