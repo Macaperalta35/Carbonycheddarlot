@@ -326,7 +326,7 @@ export const initialMenu = [
     ]
   },
 
-  // ── BEBIDAS & CAFETERÍA ──────────────────────────────────────
+  // ── BEBIDAS & CAFÉ ────────────────────────────────────────────
   {
     id: "beb-01", name: "Ice Tea en Lata", price: 2000,
     category: "Bebidas & Café", emoji: "🧋",
@@ -334,52 +334,16 @@ export const initialMenu = [
     stock: 50, variants: []
   },
   {
-    id: "beb-02", name: "Nescafé en Lata", price: 2000,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Nescafé en lata.",
-    stock: 50, variants: []
-  },
-  {
-    id: "beb-03", name: "Café Normal", price: 1500,
+    id: "beb-02", name: "Café Normal", price: 1500,
     category: "Bebidas & Café", emoji: "☕",
     description: "Café normal caliente.",
     stock: 99, variants: []
   },
   {
-    id: "beb-04", name: "Té", price: 1500,
+    id: "beb-03", name: "Té", price: 1500,
     category: "Bebidas & Café", emoji: "🍵",
     description: "Té caliente a elección.",
     stock: 99, variants: []
-  },
-  {
-    id: "beb-05", name: "Café con Sabores", price: 2000,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Café con sabores a elección.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-06", name: "Café de Grano", price: 2500,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Café de grano molido en el momento.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-07", name: "Café de Grano Cortado", price: 3000,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Café de grano cortado con leche.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-08", name: "Nescafé Vainilla Instantáneo", price: 3000,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Nescafé vainilla instantáneo.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-09", name: "Sopa de Zapallo", price: 2000,
-    category: "Bebidas & Café", emoji: "🍵",
-    description: "Crema de zapallo caliente.",
-    stock: 20, variants: []
   },
 
   // ── EXTRAS HAMBURGUESAS ──────────────────────────────────────
