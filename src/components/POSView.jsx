@@ -41,6 +41,18 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
   const categories = ["All", ...new Set(menu.map(item => item.category).filter(Boolean))];
   const QUICK_CASH = [1000, 2000, 5000, 10000, 20000, 50000];
 
+  const CATEGORY_META = {
+    "Hamburguesas":      { icon: "🍔", desc: "Carne 120 gr · incluye porción de papas pequeñas" },
+    "Milanesas":         { icon: "🥩", desc: "Res premium rebozada en panko · sandwiches con papas, al plato con ensalada o sopa" },
+    "Almuerzos":         { icon: "🍽️", desc: "Platos del día con acompañamiento incluido" },
+    "Conos":             { icon: "🌮", desc: "$6.500 c/u · tortilla de maíz rellena" },
+    "Bebidas & Cafetería":{ icon: "☕", desc: "Bebidas frías y calientes" },
+    "Quesadillas":       { icon: "🫓", desc: "Tortilla de maíz con queso fundido · acompañadas de guacamole" },
+    "Niños":             { icon: "🧒", desc: "$5.000 c/u · incluye Refreskid en sobre" },
+    "Papas Fritas":      { icon: "🍟", desc: "Disponibles en 3 tamaños: Individual / Mediana / Grande" },
+    "Extras":            { icon: "➕", desc: "Ingredientes adicionales para personalizar tu pedido" },
+  };
+
   const filteredMenu = menu.filter(item => {
     const matchCat    = activeCategory === "All" || item.category === activeCategory;
     const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -254,6 +266,36 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
     }).format(v);
 
   const onlineOrders = orders.filter(o => o.type === "Para Retirar" && o.status !== "Completado");
+
+  const ProductCard = ({ item }) => {
+    const qtyInTicket = ticketItems.filter(i => i.id === item.id).reduce((s, i) => s + i.qty, 0);
+    const available   = Math.max(0, item.stock - qtyInTicket);
+    const isOut       = available <= 0;
+    const isLow       = !isOut && available < 5;
+    const hasVariants = item.variants && item.variants.length > 0;
+    return (
+      <button
+        className={`pos-product-card ${isOut ? "out-of-stock" : ""}`}
+        onClick={() => addToTicket(item)}
+        disabled={isOut}
+        aria-label={`${item.name} ${formatCLP(item.price)}${hasVariants ? " - elegir tamaño" : ""}`}
+      >
+        <span className="item-emoji">{item.emoji}</span>
+        <span className="item-name">{item.name}</span>
+        <span className="item-price">
+          {hasVariants ? `Desde ${formatCLP(item.price)}` : formatCLP(item.price)}
+        </span>
+        {hasVariants && <span className="variant-hint">Elegir tamaño ▾</span>}
+        {isOut ? (
+          <span className="stock-badge stock-critical">Sin Stock</span>
+        ) : isLow ? (
+          <span className="stock-badge stock-warn">¡Solo {available}!</span>
+        ) : (
+          <span className="stock-badge stock-normal">{available} u.</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="pos-layout">
@@ -518,35 +560,41 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
           ))}
         </div>
 
-        <div className="pos-products-grid">
-          {filteredMenu.map(item => {
-            const qtyInTicket   = ticketItems.filter(i => i.id === item.id).reduce((s, i) => s + i.qty, 0);
-            const available     = Math.max(0, item.stock - qtyInTicket);
-            const isOut         = available <= 0;
-            const isLow         = !isOut && available < 5;
+        {/* Encabezado de categoría activa (cuando no es "Todos") */}
+        {activeCategory !== "All" && !searchQuery && CATEGORY_META[activeCategory] && (
+          <div className="category-header-banner">
+            <span className="cat-banner-icon">{CATEGORY_META[activeCategory].icon}</span>
+            <div>
+              <h3 className="cat-banner-title">{activeCategory}</h3>
+              <p className="cat-banner-desc">{CATEGORY_META[activeCategory].desc}</p>
+            </div>
+          </div>
+        )}
 
-            return (
-              <button
-                key={item.id}
-                className={`pos-product-card ${isOut ? "out-of-stock" : ""}`}
-                onClick={() => addToTicket(item)}
-                disabled={isOut}
-              >
-                <span className="item-emoji">{item.emoji}</span>
-                <span className="item-name">{item.name}</span>
-                <span className="item-price">
-                  {item.variants ? `Desde ${formatCLP(item.price)}` : formatCLP(item.price)}
-                </span>
-                {isOut ? (
-                  <span className="stock-badge stock-critical">Sin Stock</span>
-                ) : isLow ? (
-                  <span className="stock-badge stock-warn">¡Solo {available}!</span>
-                ) : (
-                  <span className="stock-badge stock-normal">{available} u.</span>
-                )}
-              </button>
-            );
-          })}
+        <div className="pos-products-grid">
+          {activeCategory === "All" && !searchQuery
+            ? /* Vista agrupada por categoría */
+              categories.filter(c => c !== "All").map(cat => {
+                const catItems = menu.filter(item => item.category === cat);
+                if (catItems.length === 0) return null;
+                const meta = CATEGORY_META[cat];
+                return (
+                  <React.Fragment key={cat}>
+                    {/* Separador de categoría */}
+                    <div className="category-group-header">
+                      {meta && <span>{meta.icon}</span>}
+                      <div>
+                        <span className="cat-group-name">{cat}</span>
+                        {meta && <span className="cat-group-desc"> — {meta.desc}</span>}
+                      </div>
+                    </div>
+                    {catItems.map(item => <ProductCard key={item.id} item={item} />)}
+                  </React.Fragment>
+                );
+              })
+            : /* Vista filtrada (categoría activa o búsqueda) */
+              filteredMenu.map(item => <ProductCard key={item.id} item={item} />)
+          }
         </div>
       </div>
 

@@ -6,13 +6,13 @@ import { useLocalStorage } from './useLocalStorage';
  * Reemplaza useLocalStorage con persistencia en Supabase.
  * Si Supabase no está configurado, vuelve a localStorage automáticamente.
  *
- * Uso:  const [data, setData, loading] = useSupabaseData('orders', [], { orderBy: 'timestamp' })
- * Igual que useLocalStorage:  setData(newArray)  o  setData(prev => [...prev, item])
+ * mergeSchema: true → para menú. Siempre usa initialData como fuente de verdad
+ * para nombre/precio/categoría/etc., conservando solo el stock desde Supabase.
+ * Elimina items de Supabase que ya no existen en initialData.
  */
 export function useSupabaseData(tableName, localKey, initialData = [], options = {}) {
   const { orderBy = 'created_at', orderAsc = false, mergeSchema = false } = options;
 
-  // ─── Fallback a localStorage si Supabase no está configurado ──
   const [lsData, setLsData] = useLocalStorage(localKey, initialData);
   const [sbData, setSbData] = useState(initialData);
   const [loading, setLoading] = useState(isConfigured);
@@ -20,7 +20,15 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
   const prevRef  = useRef(initialData);
   const readyRef = useRef(false);
 
-  // ─── Carga inicial desde Supabase ─────────────────────────────
+  // Aplica el merge de schema: initialData con stock de DB, descarta items huérfanos
+  const applyMerge = useCallback((rows) => {
+    const rowMap  = new Map(rows.map(r => [String(r.id), r]));
+    return initialData.map(init => ({
+      ...init,
+      stock: rowMap.has(String(init.id)) ? rowMap.get(String(init.id)).stock : init.stock,
+    }));
+  }, [initialData]);
+
   useEffect(() => {
     if (!isConfigured) return;
 
@@ -38,22 +46,23 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
 
       if (rows && rows.length > 0) {
         if (mergeSchema && initialData.length > 0) {
-          // mergeSchema: actualiza nombre/precio/categoría/etc. desde initialData,
-          // pero conserva el stock actual de Supabase
-          const rowMap = new Map(rows.map(r => [String(r.id), r]));
-          const merged = initialData.map(init => ({
-            ...init,
-            stock: rowMap.has(String(init.id)) ? rowMap.get(String(init.id)).stock : init.stock,
-          }));
+          const rowMap      = new Map(rows.map(r => [String(r.id), r]));
+          const initIdSet   = new Set(initialData.map(i => String(i.id)));
+          const merged      = applyMerge(rows);
 
-          // Detectar ítems nuevos o con metadata cambiada (sin comparar stock)
+          // Eliminar ítems huérfanos (en DB pero no en initialData)
+          const toDelete = rows.filter(r => !initIdSet.has(String(r.id)));
+          if (toDelete.length > 0) {
+            await supabase.from(tableName).delete().in('id', toDelete.map(d => d.id));
+          }
+
+          // Upsert ítems nuevos o con metadata cambiada (excluye stock)
           const toUpsert = merged.filter(item => {
             const ex = rowMap.get(String(item.id));
             if (!ex) return true;
-            const schemaKeys = Object.keys(item).filter(k => k !== 'stock');
-            return schemaKeys.some(k => JSON.stringify(item[k]) !== JSON.stringify(ex[k]));
+            const keys = Object.keys(item).filter(k => k !== 'stock');
+            return keys.some(k => JSON.stringify(item[k]) !== JSON.stringify(ex[k]));
           });
-
           if (toUpsert.length > 0) {
             await supabase.from(tableName).upsert(toUpsert, { onConflict: 'id' });
           }
@@ -61,15 +70,11 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
           setSbData(merged);
           prevRef.current = merged;
         } else {
-          // Comportamiento normal: usar datos de Supabase tal cual
           setSbData(rows);
           prevRef.current = rows;
         }
       } else if (initialData.length > 0) {
-        // Tabla vacía + hay datos iniciales → sembrar (seed)
-        const { error: seedErr } = await supabase
-          .from(tableName)
-          .insert(initialData);
+        const { error: seedErr } = await supabase.from(tableName).insert(initialData);
         if (!seedErr) {
           setSbData(initialData);
           prevRef.current = initialData;
@@ -79,13 +84,12 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
       }
 
       setLoading(false);
-
       readyRef.current = true;
     };
 
     load();
 
-    // Suscripción en tiempo real para sincronizar con otros dispositivos
+    // Suscripción real-time — respeta mergeSchema para no reintroducir items viejos
     const channel = supabase
       .channel(`rt:${tableName}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName },
@@ -94,10 +98,14 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
           const q = supabase.from(tableName).select('*');
           if (orderBy) q.order(orderBy, { ascending: orderAsc });
           const { data: fresh } = await q;
-          if (fresh) {
-            setSbData(fresh);
-            prevRef.current = fresh;
-          }
+          if (!fresh) return;
+
+          const result = mergeSchema && initialData.length > 0
+            ? applyMerge(fresh)
+            : fresh;
+
+          setSbData(result);
+          prevRef.current = result;
         }
       )
       .subscribe();
@@ -105,48 +113,33 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
     return () => { supabase.removeChannel(channel); };
   }, [tableName]);
 
-  // ─── setData: actualiza estado local Y sincroniza con Supabase ─
   const setSupabaseData = useCallback(async (newDataOrFn) => {
-    const prev      = prevRef.current;
-    const newData   = typeof newDataOrFn === 'function' ? newDataOrFn(prev) : newDataOrFn;
+    const prev    = prevRef.current;
+    const newData = typeof newDataOrFn === 'function' ? newDataOrFn(prev) : newDataOrFn;
 
-    // Actualización optimista (inmediata en UI)
     setSbData(newData);
     prevRef.current = newData;
 
     if (!readyRef.current) return;
 
-    // Detectar inserciones y modificaciones
     const toUpsert = newData.filter(item => {
       const prevItem = prev.find(p => String(p.id) === String(item.id));
       return !prevItem || JSON.stringify(prevItem) !== JSON.stringify(item);
     });
 
-    // Detectar eliminaciones
-    const newIds  = new Set(newData.map(n => String(n.id)));
+    const newIds   = new Set(newData.map(n => String(n.id)));
     const toDelete = prev.filter(p => !newIds.has(String(p.id)));
 
     if (toUpsert.length > 0) {
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(toUpsert, { onConflict: 'id' });
+      const { error } = await supabase.from(tableName).upsert(toUpsert, { onConflict: 'id' });
       if (error) console.error(`[Supabase] Error upsert ${tableName}:`, error.message);
     }
-
     if (toDelete.length > 0) {
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .in('id', toDelete.map(d => d.id));
+      const { error } = await supabase.from(tableName).delete().in('id', toDelete.map(d => d.id));
       if (error) console.error(`[Supabase] Error delete ${tableName}:`, error.message);
     }
   }, [tableName]);
 
-  // ─── Retorno ──────────────────────────────────────────────────
-  if (!isConfigured) {
-    // Sin Supabase → funciona igual que antes con localStorage
-    return [lsData, setLsData, false];
-  }
-
+  if (!isConfigured) return [lsData, setLsData, false];
   return [sbData, setSupabaseData, loading];
 }

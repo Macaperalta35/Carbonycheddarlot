@@ -2848,6 +2848,60 @@ body {
 .val-up   { color: #00e676; }
 .val-down { color: var(--color-danger); }
 
+/* ── Encabezados de categoría en POS ─────────────────────────── */
+.category-header-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 87, 34, 0.08);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 0 0 12px 0;
+}
+.cat-banner-icon { font-size: 1.6rem; line-height: 1; }
+.cat-banner-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.cat-banner-desc {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Separador de categoría en vista "Todos" */
+.category-group-header {
+  grid-column: 1 / -1;   /* span toda la fila */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px 6px;
+  border-bottom: 1px solid var(--border-color);
+  margin-top: 6px;
+}
+.cat-group-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.cat-group-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Hint de variante en card de producto */
+.variant-hint {
+  font-size: 0.7rem;
+  color: var(--secondary);
+  font-weight: 600;
+  margin-top: -4px;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    WIDGET DE ACCESIBILIDAD
    ═══════════════════════════════════════════════════════════════ */
