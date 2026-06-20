@@ -9,11 +9,9 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// Registrar Service Worker para soporte PWA
+// Desregistrar cualquier service worker previo que pueda cachear JS viejo
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('Service Worker registrado:', reg.scope))
-      .catch(err => console.error('Error al registrar Service Worker:', err));
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
   });
 }
