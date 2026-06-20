@@ -249,6 +249,12 @@ export const initialMenu = [
     description: "Sopa de zapallo caliente.",
     stock: 20, variants: []
   },
+  {
+    id: "beb-11", name: "Té Chai", price: 3000,
+    category: "Bebidas & Cafetería", emoji: "🍵",
+    description: "Té chai caliente.",
+    stock: 99, variants: []
+  },
 
   // ── QUESADILLAS & PORCIONES ──────────────────────────────────
   {
