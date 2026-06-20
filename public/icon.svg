@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fondo oscuro redondeado -->
+  <rect width="512" height="512" rx="96" fill="#1c1c21"/>
+  <!-- Borde naranja sutil -->
+  <rect x="8" y="8" width="496" height="496" rx="88" fill="none" stroke="#ff9100" stroke-width="10" opacity="0.4"/>
+
+  <!-- Pan superior (bun) -->
+  <path d="M80,195 Q256,95 432,195 L432,230 L80,230 Z" fill="#ff9100"/>
+  <!-- Semillas de sésamo -->
+  <circle cx="190" cy="168" r="10" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="256" cy="148" r="10" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="322" cy="168" r="10" fill="rgba(255,255,255,0.55)"/>
+
+  <!-- Queso cheddar -->
+  <rect x="68" y="228" width="376" height="22" rx="4" fill="#ffc107"/>
+
+  <!-- Carne (patty) -->
+  <rect x="68" y="248" width="376" height="64" rx="12" fill="#5d2e00"/>
+  <!-- Grill marks -->
+  <line x1="130" y1="256" x2="130" y2="304" stroke="#7a3f00" stroke-width="8"/>
+  <line x1="200" y1="256" x2="200" y2="304" stroke="#7a3f00" stroke-width="8"/>
+  <line x1="270" y1="256" x2="270" y2="304" stroke="#7a3f00" stroke-width="8"/>
+  <line x1="340" y1="256" x2="340" y2="304" stroke="#7a3f00" stroke-width="8"/>
+
+  <!-- Lechuga / vegetal -->
+  <rect x="68" y="310" width="376" height="20" rx="5" fill="#388e3c"/>
+
+  <!-- Pan inferior -->
+  <rect x="68" y="328" width="376" height="56" rx="28" fill="#ff9100"/>
+
+  <!-- Texto C&C -->
+  <text x="256" y="444"
+        font-family="Arial Black, Helvetica, sans-serif"
+        font-weight="900"
+        font-size="78"
+        text-anchor="middle"
+        fill="#ff9100"
+        letter-spacing="2">C&amp;C</text>
+  <text x="256" y="488"
+        font-family="Arial, sans-serif"
+        font-size="34"
+        text-anchor="middle"
+        fill="#888888"
+        letter-spacing="10">LOTA</text>
+</svg>

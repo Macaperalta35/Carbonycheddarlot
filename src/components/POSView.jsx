@@ -49,8 +49,9 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
     "Bebidas & Cafetería":{ icon: "☕", desc: "Bebidas frías y calientes" },
     "Quesadillas":       { icon: "🫓", desc: "Tortilla de maíz con queso fundido · acompañadas de guacamole" },
     "Niños":             { icon: "🧒", desc: "$5.000 c/u · incluye Refreskid en sobre" },
-    "Papas Fritas":      { icon: "🍟", desc: "Disponibles en 3 tamaños: Individual / Mediana / Grande" },
-    "Extras":            { icon: "➕", desc: "Ingredientes adicionales para personalizar tu pedido" },
+    "Papas Fritas":        { icon: "🍟", desc: "Disponibles en 3 tamaños: Individual / Mediana / Grande" },
+    "Extras Hamburguesas": { icon: "➕", desc: "Ingredientes sueltos para personalizar hamburguesas y milanesas" },
+    "Extras Papas":        { icon: "🥗", desc: "Adicionales para papas fritas · Carnes & Premium o Vegetales & Salsas · elegir tamaño" },
   };
 
   const filteredMenu = menu.filter(item => {
@@ -613,7 +614,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
                 >
                   <div className="variant-option-details">
                     <span className="variant-option-name">{v.name}</span>
-                    <span className="variant-option-desc">Porción de papas fritas</span>
+                    <span className="variant-option-desc">{variantModalItem.category === "Extras Papas" ? "Extra para papas" : "Porción de papas fritas"}</span>
                   </div>
                   <span className="variant-option-price">{formatCLP(v.price)}</span>
                 </button>

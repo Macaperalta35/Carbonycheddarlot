@@ -9,9 +9,9 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// Desregistrar cualquier service worker previo que pueda cachear JS viejo
+// Registrar Service Worker para PWA (instalación en tablets y celulares)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }

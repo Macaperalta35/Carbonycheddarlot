@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import logoUrl from "./assets/logo.js";
 import { initialMenu } from "./data/menu";
 import { useSupabaseData } from "./hooks/useSupabaseData";
 import { useLocalStorage } from "./hooks/useLocalStorage";
@@ -10,7 +11,10 @@ import ReportsView   from "./components/ReportsView";
 import EgresosView   from "./components/EgresosView";
 import ComprasView   from "./components/ComprasView";
 import SettingsView           from "./components/SettingsView";
+import CartaView             from "./components/CartaView";
 import AccessibilityWidget   from "./components/AccessibilityWidget";
+import { useCartaImages }    from "./hooks/useCartaImages";
+import InstallButton        from "./components/InstallButton";
 
 // Tabs y los roles que pueden verlos
 const TABS = [
@@ -19,6 +23,7 @@ const TABS = [
   { id: "egresos",   label: "Egresos",       icon: "💸", roles: ["admin", "superadmin"] },
   { id: "compras",   label: "Compras",       icon: "🛒", roles: ["admin", "superadmin"] },
   { id: "reports",   label: "Reportes",      icon: "📊", roles: ["admin", "superadmin"] },
+  { id: "carta",     label: "Carta PDF",     icon: "📄", roles: ["cajero", "admin", "superadmin"] },
   { id: "settings",  label: "Configuración", icon: "⚙️", roles: ["superadmin"] },
 ];
 
@@ -39,9 +44,22 @@ export default function App() {
   // PINs configurables, guardados en localStorage
   const [pins, setPins] = useLocalStorage("carbon_cheddar_pins_v1", DEFAULT_PINS);
 
+  // Imágenes de la carta digital
+  const {
+    images:   cartaImages,
+    loading:  cartaLoading,
+    dbError:  cartaError,
+    upsert:   cartaUpsert,
+    remove:   cartaRemove,
+    swap:     cartaSwap,
+    reload:   cartaReload,
+  } = useCartaImages();
+
   const isLoading = isConfigured && (menuLoading || ordersLoading || egresosLoading || comprasLoading);
 
-  const [viewMode,  setViewMode]  = useState("staff");
+  // Si la URL NO tiene ?pos=1, el cliente ve solo la carta (sin acceso al sistema)
+  const isStaffUrl = new URLSearchParams(window.location.search).has("pos");
+  const [viewMode,  setViewMode]  = useState(isStaffUrl ? "staff" : "customer");
   const [staffRole, setStaffRole] = useState("cajero");
   const [staffTab,  setStaffTab]  = useState("sales");
 
@@ -94,9 +112,9 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {viewMode === "customer" && (
+      {viewMode === "customer" && isStaffUrl && (
         <div className="simulation-banner fallback-print-hide">
-          <span>🌐 Vista del Cliente — Pedido online para retirar en Lota</span>
+          <span>🌐 Vista del Cliente</span>
           <button className="btn btn-secondary btn-xs" onClick={() => setViewMode("staff")}>
             💻 Volver al POS del Personal
           </button>
@@ -104,14 +122,19 @@ export default function App() {
       )}
 
       {viewMode === "customer" && (
-        <CustomerView menu={menu} setMenu={setMenu} orders={orders} setOrders={setOrders} />
+        <CustomerView
+          menu={menu} setMenu={setMenu}
+          orders={orders} setOrders={setOrders}
+          cartaImages={cartaImages}
+          cartaLoading={cartaLoading}
+        />
       )}
 
       {viewMode === "staff" && (
         <>
           <nav className="staff-navbar fallback-print-hide">
             <div className="nav-brand">
-              <span className="nav-logo">🍔</span>
+              <img src={logoUrl} alt="C&C" className="nav-logo-img" />
               <div>
                 <h1>Carbon &amp; Cheddar POS</h1>
                 <span className="role-badge" style={{ backgroundColor: meta.bg, color: meta.color }}>
@@ -146,6 +169,7 @@ export default function App() {
                   <option value="superadmin">👑 Super Admin</option>
                 </select>
               </div>
+              <InstallButton />
               <button className="btn btn-primary btn-sm" onClick={() => setViewMode("customer")}>
                 🌐 Ver Menú Cliente
               </button>
@@ -170,6 +194,18 @@ export default function App() {
           )}
           {staffTab === "reports" && ["admin","superadmin"].includes(staffRole) && (
             <ReportsView menu={menu} orders={orders} egresos={egresos} compras={compras} />
+          )}
+          {staffTab === "carta" && (
+            <CartaView
+              menu={menu}
+              currentUserRole={staffRole}
+              cartaImages={cartaImages}
+              cartaError={cartaError}
+              onUpsert={cartaUpsert}
+              onRemove={cartaRemove}
+              onSwap={cartaSwap}
+              onReload={cartaReload}
+            />
           )}
           {staffTab === "settings" && staffRole === "superadmin" && (
             <SettingsView pins={pins} setPins={setPins} />

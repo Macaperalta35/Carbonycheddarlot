@@ -394,109 +394,109 @@ export const initialMenu = [
     ]
   },
 
-  // ── EXTRAS HAMBURGUESAS ──────────────────────────────────────
+  // ── EXTRAS HAMBURGUESAS & MILANESAS ─────────────────────────
   {
     id: "ext-01", name: "Carne Adicional (120gr)", price: 2450,
-    category: "Extras", emoji: "🍖",
+    category: "Extras Hamburguesas", emoji: "🍖",
     description: "Carne adicional de 120gr para hamburguesa. Hasta 4 unidades.",
     stock: 99, variants: []
   },
   {
     id: "ext-02", name: "Huevo Frito", price: 1200,
-    category: "Extras", emoji: "🍳",
+    category: "Extras Hamburguesas", emoji: "🍳",
     description: "Huevo frito extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-03", name: "Salchichas Cortadas", price: 1500,
-    category: "Extras", emoji: "🌭",
+    category: "Extras Hamburguesas", emoji: "🌭",
     description: "Salchichas cortadas extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-04", name: "Tocino Crocante", price: 2000,
-    category: "Extras", emoji: "🥓",
+    category: "Extras Hamburguesas", emoji: "🥓",
     description: "Tocino crocante extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-05", name: "Longaniza Artesanal", price: 2500,
-    category: "Extras", emoji: "🥓",
+    category: "Extras Hamburguesas", emoji: "🥓",
     description: "Longaniza artesanal extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-06", name: "Guacamole (Premium)", price: 2500,
-    category: "Extras", emoji: "🥑",
+    category: "Extras Hamburguesas", emoji: "🥑",
     description: "Guacamole premium extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-07", name: "Salsa Cheddar & Tocino (Premium)", price: 2800,
-    category: "Extras", emoji: "🧀",
+    category: "Extras Hamburguesas", emoji: "🧀",
     description: "Salsa en base a queso cheddar y tocino premium.",
     stock: 99, variants: []
   },
   {
     id: "ext-08", name: "Carne Mechada Premium", price: 3000,
-    category: "Extras", emoji: "🍖",
+    category: "Extras Hamburguesas", emoji: "🍖",
     description: "Carne mechada premium extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-09", name: "Salsa Blanca con Camarones (Premium)", price: 3500,
-    category: "Extras", emoji: "🍤",
+    category: "Extras Hamburguesas", emoji: "🍤",
     description: "Salsa blanca cremosa con camarones premium.",
     stock: 99, variants: []
   },
   {
     id: "ext-10", name: "Queso Cheddar Fundido", price: 1200,
-    category: "Extras", emoji: "🧀",
+    category: "Extras Hamburguesas", emoji: "🧀",
     description: "Queso cheddar fundido extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-11", name: "Salsa Cheddar Tibia", price: 1200,
-    category: "Extras", emoji: "🧀",
+    category: "Extras Hamburguesas", emoji: "🧀",
     description: "Salsa en base a queso cheddar tibia.",
     stock: 99, variants: []
   },
   {
     id: "ext-12", name: "Queso Gauda Fundido", price: 1200,
-    category: "Extras", emoji: "🧀",
+    category: "Extras Hamburguesas", emoji: "🧀",
     description: "Queso Gauda fundido extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-13", name: "Tomate en Cubos", price: 800,
-    category: "Extras", emoji: "🍅",
+    category: "Extras Hamburguesas", emoji: "🍅",
     description: "Tomate fresco en cubos.",
     stock: 99, variants: []
   },
   {
     id: "ext-14", name: "Salsa Doritos", price: 1200,
-    category: "Extras", emoji: "🌶️",
+    category: "Extras Hamburguesas", emoji: "🌶️",
     description: "Salsa Doritos extra.",
     stock: 99, variants: []
   },
   {
     id: "ext-15", name: "Palta Fresca (Cubos)", price: 1500,
-    category: "Extras", emoji: "🥑",
+    category: "Extras Hamburguesas", emoji: "🥑",
     description: "Palta fresca en cubos.",
     stock: 99, variants: []
   },
   {
     id: "ext-16", name: "Champiñones Salteados", price: 1500,
-    category: "Extras", emoji: "🍄",
+    category: "Extras Hamburguesas", emoji: "🍄",
     description: "Champiñones salteados extra.",
     stock: 99, variants: []
   },
 
-  // ── EXTRAS PAPAS FRITAS ──────────────────────────────────────
+  // ── EXTRAS PAPAS FRITAS (por tamaño) ─────────────────────────
   {
     id: "exp-01", name: "Extra Papas - Carnes & Premium", price: 1200,
-    category: "Extras", emoji: "🍖",
-    description: "Mechada, Tocino, Salchicha, Longaniza, Guacamole, Salsa Camarón o Salsa Queso Cheddar Tocino.",
+    category: "Extras Papas", emoji: "🍖",
+    description: "Mechada, Tocino, Salchicha, Longaniza, Guacamole, Salsa Camarón o Salsa Queso Cheddar Tocino. Elegir tamaño.",
     stock: 99, variants: [
       { name: "Cono",       price: 1200 },
       { name: "Individual", price: 1500 },
@@ -506,8 +506,8 @@ export const initialMenu = [
   },
   {
     id: "exp-02", name: "Extra Papas - Vegetales & Salsas", price: 800,
-    category: "Extras", emoji: "🥗",
-    description: "Champiñones, Choclo, Palta, Tomate, Nachos o Salsa Doritos.",
+    category: "Extras Papas", emoji: "🥗",
+    description: "Champiñones, Choclo, Palta, Tomate, Nachos o Salsa Doritos. Elegir tamaño.",
     stock: 99, variants: [
       { name: "Cono",       price: 800  },
       { name: "Individual", price: 1000 },
