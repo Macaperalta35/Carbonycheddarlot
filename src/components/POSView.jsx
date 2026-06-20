@@ -38,7 +38,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
   }, []);
 
   const tables     = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Mesa 6", "Para Llevar"];
-  const categories = ["All", "Burgers", "Completos", "Almuerzos", "Niños", "Sides", "Drinks", "Desserts"];
+  const categories = ["All", ...new Set(menu.map(item => item.category).filter(Boolean))];
   const QUICK_CASH = [1000, 2000, 5000, 10000, 20000, 50000];
 
   const filteredMenu = menu.filter(item => {
@@ -51,7 +51,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
   const addToTicket = (item, chosenVariant = null) => {
     if (item.stock <= 0) { alert("Sin stock disponible."); return; }
 
-    if (item.variants && !chosenVariant) {
+    if (item.variants && item.variants.length > 0 && !chosenVariant) {
       setVariantModalItem(item);
       return;
     }
@@ -142,9 +142,9 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
 
   /* ─── Combo ──────────────────────────────────────────────── */
   const detectCombo = () =>
-    ticketItems.some(i => i.category === "Burgers") &&
-    ticketItems.some(i => i.category === "Sides")   &&
-    ticketItems.some(i => i.category === "Drinks");
+    ticketItems.some(i => i.category === "Hamburguesas" || i.category === "Milanesas") &&
+    ticketItems.some(i => i.category === "Papas Fritas") &&
+    ticketItems.some(i => i.category === "Bebidas & Café");
 
   /* ─── Totales ─────────────────────────────────────────────── */
   const getLineSubtotal = (item) => {
