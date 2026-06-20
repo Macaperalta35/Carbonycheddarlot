@@ -188,6 +188,68 @@ export const initialMenu = [
     stock: 30, variants: []
   },
 
+  // ── BEBIDAS & CAFETERÍA ───────────────────────────────────────
+  {
+    id: "beb-01", name: "Ice Tea en Lata", price: 2000,
+    category: "Bebidas & Cafetería", emoji: "🧋",
+    description: "Ice Tea en lata.",
+    stock: 50, variants: []
+  },
+  {
+    id: "beb-02", name: "Café Normal", price: 1500,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Café normal caliente.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-03", name: "Té", price: 1500,
+    category: "Bebidas & Cafetería", emoji: "🍵",
+    description: "Té caliente a elección.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-04", name: "Refreskid en Sobre", price: 500,
+    category: "Bebidas & Cafetería", emoji: "🥤",
+    description: "Refreskid en sobre.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-05", name: "Nescafé en Lata", price: 2000,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Nescafé frío en lata.",
+    stock: 50, variants: []
+  },
+  {
+    id: "beb-06", name: "Café con Sabores", price: 2000,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Café con sabores a elección.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-07", name: "Café de Grano", price: 2500,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Café de grano premium.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-08", name: "Café de Grano Cortado", price: 3000,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Café de grano cortado con leche.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-09", name: "Nescafé Vainilla Instantáneo", price: 3000,
+    category: "Bebidas & Cafetería", emoji: "☕",
+    description: "Nescafé vainilla instantáneo caliente.",
+    stock: 99, variants: []
+  },
+  {
+    id: "beb-10", name: "Sopa de Zapallo", price: 2000,
+    category: "Bebidas & Cafetería", emoji: "🥣",
+    description: "Sopa de zapallo caliente.",
+    stock: 20, variants: []
+  },
+
   // ── QUESADILLAS & PORCIONES ──────────────────────────────────
   {
     id: "que-01", name: "Quesadilla del Campamento", price: 6500,
@@ -324,32 +386,6 @@ export const initialMenu = [
       { name: "Mediana",    price: 9500 },
       { name: "Grande",     price: 15000 }
     ]
-  },
-
-  // ── BEBIDAS & CAFÉ ────────────────────────────────────────────
-  {
-    id: "beb-01", name: "Ice Tea en Lata", price: 2000,
-    category: "Bebidas & Café", emoji: "🧋",
-    description: "Ice Tea en lata.",
-    stock: 50, variants: []
-  },
-  {
-    id: "beb-02", name: "Café Normal", price: 1500,
-    category: "Bebidas & Café", emoji: "☕",
-    description: "Café normal caliente.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-03", name: "Té", price: 1500,
-    category: "Bebidas & Café", emoji: "🍵",
-    description: "Té caliente a elección.",
-    stock: 99, variants: []
-  },
-  {
-    id: "beb-04", name: "Refreskid en Sobre", price: 500,
-    category: "Bebidas & Café", emoji: "🥤",
-    description: "Refreskid en sobre.",
-    stock: 99, variants: []
   },
 
   // ── EXTRAS HAMBURGUESAS ──────────────────────────────────────

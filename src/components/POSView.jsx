@@ -144,7 +144,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
   const detectCombo = () =>
     ticketItems.some(i => i.category === "Hamburguesas" || i.category === "Milanesas") &&
     ticketItems.some(i => i.category === "Papas Fritas") &&
-    ticketItems.some(i => i.category === "Bebidas & Café");
+    ticketItems.some(i => i.category === "Bebidas & Cafetería");
 
   /* ─── Totales ─────────────────────────────────────────────── */
   const getLineSubtotal = (item) => {
