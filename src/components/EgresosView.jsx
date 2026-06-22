@@ -52,19 +52,35 @@ const EMPTY_FORM = {
 export default function EgresosView({ egresos, setEgresos }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [filter, setFilter] = useState({ category: "Todas", search: "", dateFrom: "", dateTo: "" });
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [btPrinting, setBtPrinting] = useState(false);
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  const resetForm = () => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(false); };
+
+  const handleEdit = (egreso) => {
+    setForm({
+      date: egreso.date,
+      category: egreso.category,
+      description: egreso.description,
+      amount: String(egreso.amount),
+      paymentMethod: egreso.paymentMethod || "Efectivo",
+      supplier: egreso.supplier || "",
+      notes: egreso.notes || "",
+    });
+    setEditingId(egreso.id);
+    setShowForm(true);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const amount = parseFloat(form.amount);
     if (!form.description.trim() || !amount || amount <= 0) return;
 
-    const newEgreso = {
-      id: Date.now(),
+    const data = {
       date: form.date,
       category: form.category,
       description: form.description.trim(),
@@ -72,12 +88,14 @@ export default function EgresosView({ egresos, setEgresos }) {
       paymentMethod: form.paymentMethod,
       supplier: form.supplier.trim(),
       notes: form.notes.trim(),
-      timestamp: Date.now(),
     };
 
-    setEgresos([newEgreso, ...egresos]);
-    setForm({ ...EMPTY_FORM, date: form.date });
-    setShowForm(false);
+    if (editingId) {
+      setEgresos(egresos.map(eg => eg.id === editingId ? { ...eg, ...data } : eg));
+    } else {
+      setEgresos([{ id: Date.now(), ...data, timestamp: Date.now() }, ...egresos]);
+    }
+    resetForm();
   };
 
   const handleDelete = (id) => {
@@ -138,7 +156,7 @@ export default function EgresosView({ egresos, setEgresos }) {
           <h1>Egresos de Dinero 💸</h1>
           <p className="subtitle">Registra gastos, pagos de servicios y salidas de caja</p>
         </div>
-        <button className="btn btn-danger" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-danger" onClick={() => showForm ? resetForm() : (setForm(EMPTY_FORM), setEditingId(null), setShowForm(true))}>
           {showForm ? "× Cancelar" : "+ Nuevo Egreso"}
         </button>
       </header>
@@ -178,7 +196,7 @@ export default function EgresosView({ egresos, setEgresos }) {
       {showForm && (
         <div className="form-card fade-in">
           <h2 style={{ margin: "0 0 20px 0", fontSize: "1.2rem", fontWeight: 700 }}>
-            Registrar Nuevo Egreso
+            {editingId ? "Editar Egreso" : "Registrar Nuevo Egreso"}
           </h2>
           <form onSubmit={handleSubmit}>
             <div className="form-row-3">
@@ -245,11 +263,11 @@ export default function EgresosView({ egresos, setEgresos }) {
             </div>
 
             <div className="modal-actions" style={{ marginTop: 0 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              <button type="button" className="btn btn-secondary" onClick={resetForm}>
                 Cancelar
               </button>
               <button type="submit" className="btn btn-danger">
-                💸 Registrar Egreso
+                {editingId ? "💾 Guardar Cambios" : "💸 Registrar Egreso"}
               </button>
             </div>
           </form>
@@ -346,6 +364,13 @@ export default function EgresosView({ egresos, setEgresos }) {
                   disabled={btPrinting === egreso.id}
                 >
                   {btPrinting === egreso.id ? "⏳" : "🖨️"}
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={() => handleEdit(egreso)}
+                  title="Editar egreso"
+                >
+                  ✏️
                 </button>
                 <button
                   className="btn-icon btn-icon-danger"

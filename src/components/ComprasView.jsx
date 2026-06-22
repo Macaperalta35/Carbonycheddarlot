@@ -37,11 +37,35 @@ const EMPTY_FORM = {
 export default function ComprasView({ compras, setCompras }) {
   const [form, setForm]             = useState(EMPTY_FORM);
   const [showForm, setShowForm]     = useState(false);
+  const [editingId, setEditingId]   = useState(null);
   const [detail, setDetail]         = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [filter, setFilter]         = useState({ status: "Todos", search: "", dateFrom: "", dateTo: "" });
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const resetForm = () => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(false); };
+
+  const handleEdit = (compra) => {
+    setForm({
+      docType:       compra.docType || "Factura",
+      docNumber:     compra.docNumber || "",
+      supplier:      compra.supplier || "",
+      date:          compra.date,
+      category:      compra.category || CATEGORIES[0],
+      description:   compra.description || "",
+      net:           compra.net ? String(compra.net) : "",
+      iva:           compra.iva ? String(compra.iva) : "",
+      total:         compra.total ? String(compra.total) : "",
+      paymentMethod: compra.paymentMethod || "Transferencia",
+      status:        compra.status || "Pagado",
+      notes:         compra.notes || "",
+      useIva:        (compra.iva || 0) > 0,
+    });
+    setEditingId(compra.id);
+    setDetail(null);
+    setShowForm(true);
+  };
 
   // Recalcula neto e IVA cuando cambia el total (método más común)
   const handleTotalChange = (val) => {
@@ -86,8 +110,7 @@ export default function ComprasView({ compras, setCompras }) {
     const net = parseFloat(form.net) || (form.useIva ? Math.round(total / 1.19) : total);
     const iva = form.useIva ? (total - net) : 0;
 
-    const newCompra = {
-      id:            Date.now(),
+    const data = {
       docType:       form.docType,
       docNumber:     form.docNumber.trim(),
       supplier:      form.supplier.trim(),
@@ -100,12 +123,14 @@ export default function ComprasView({ compras, setCompras }) {
       paymentMethod: form.paymentMethod,
       status:        form.status,
       notes:         form.notes.trim(),
-      timestamp:     Date.now(),
     };
 
-    setCompras([newCompra, ...compras]);
-    setForm({ ...EMPTY_FORM, date: form.date });
-    setShowForm(false);
+    if (editingId) {
+      setCompras(compras.map(c => c.id === editingId ? { ...c, ...data } : c));
+    } else {
+      setCompras([{ id: Date.now(), ...data, timestamp: Date.now() }, ...compras]);
+    }
+    resetForm();
   };
 
   const handleDelete = (id) => {
@@ -155,7 +180,7 @@ export default function ComprasView({ compras, setCompras }) {
           <h1>Compras & Facturas 🧾</h1>
           <p className="subtitle">Registra facturas, boletas y documentos de proveedores</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-primary" onClick={() => showForm ? resetForm() : (setForm(EMPTY_FORM), setEditingId(null), setShowForm(true))}>
           {showForm ? "× Cancelar" : "+ Nueva Compra / Factura"}
         </button>
       </header>
@@ -192,7 +217,7 @@ export default function ComprasView({ compras, setCompras }) {
       {showForm && (
         <div className="form-card fade-in">
           <h2 style={{ margin: "0 0 20px 0", fontSize: "1.2rem", fontWeight: 700 }}>
-            Registrar Compra / Factura
+            {editingId ? "Editar Compra / Factura" : "Registrar Compra / Factura"}
           </h2>
           <form onSubmit={handleSubmit}>
             <div className="form-row-3">
@@ -320,11 +345,11 @@ export default function ComprasView({ compras, setCompras }) {
             </div>
 
             <div className="modal-actions" style={{ marginTop: 0 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              <button type="button" className="btn btn-secondary" onClick={resetForm}>
                 Cancelar
               </button>
               <button type="submit" className="btn btn-primary">
-                🧾 Registrar Compra
+                {editingId ? "💾 Guardar Cambios" : "🧾 Registrar Compra"}
               </button>
             </div>
           </form>
@@ -486,6 +511,9 @@ export default function ComprasView({ compras, setCompras }) {
                 onClick={() => { setConfirmDelete(detail.id); setDetail(null); }}
               >
                 🗑️ Eliminar
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => handleEdit(detail)}>
+                ✏️ Editar
               </button>
               <button className="btn btn-secondary" onClick={() => setDetail(null)}>
                 Cerrar
