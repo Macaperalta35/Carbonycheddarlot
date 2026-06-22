@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import logoUrl from "./assets/logo.js";
 import { initialMenu } from "./data/menu";
+import { initialInsumos } from "./data/insumos";
 import { useSupabaseData } from "./hooks/useSupabaseData";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { isConfigured } from "./lib/supabase";
@@ -11,6 +12,7 @@ import ReportsView   from "./components/ReportsView";
 import EgresosView   from "./components/EgresosView";
 import ComprasView   from "./components/ComprasView";
 import SettingsView           from "./components/SettingsView";
+import InsumosView            from "./components/InsumosView";
 import CartaView             from "./components/CartaView";
 import AccessibilityWidget   from "./components/AccessibilityWidget";
 import { useCartaImages }    from "./hooks/useCartaImages";
@@ -20,6 +22,7 @@ import InstallButton        from "./components/InstallButton";
 const TABS = [
   { id: "sales",     label: "Ventas",        icon: "🧾", roles: ["cajero", "admin", "superadmin"] },
   { id: "inventory", label: "Inventario",    icon: "📦", roles: ["admin", "superadmin"] },
+  { id: "insumos",   label: "Insumos",       icon: "🥬", roles: ["admin", "superadmin"] },
   { id: "egresos",   label: "Egresos",       icon: "💸", roles: ["admin", "superadmin"] },
   { id: "compras",   label: "Compras",       icon: "🛒", roles: ["admin", "superadmin"] },
   { id: "reports",   label: "Reportes",      icon: "📊", roles: ["admin", "superadmin"] },
@@ -40,6 +43,8 @@ export default function App() {
   const [orders,  setOrders,  ordersLoading]  = useSupabaseData("orders",     "carbon_cheddar_orders_v1",  [],          { orderBy: "timestamp" });
   const [egresos, setEgresos, egresosLoading] = useSupabaseData("egresos",    "carbon_cheddar_egresos_v1", [],          { orderBy: "timestamp" });
   const [compras, setCompras, comprasLoading] = useSupabaseData("compras",    "carbon_cheddar_compras_v1", [],          { orderBy: "timestamp" });
+  const [insumos, setInsumos] = useSupabaseData("insumos", "carbon_cheddar_insumos_v1", initialInsumos, { orderBy: "name", orderAsc: true });
+  const [recetas, setRecetas] = useSupabaseData("recetas", "carbon_cheddar_recetas_v1", []);
 
   // PINs configurables, guardados en localStorage
   const [pins, setPins] = useLocalStorage("carbon_cheddar_pins_v1", DEFAULT_PINS);
@@ -181,11 +186,15 @@ export default function App() {
             <POSView
               menu={menu} setMenu={setMenu}
               orders={orders} setOrders={setOrders}
+              insumos={insumos} setInsumos={setInsumos} recetas={recetas}
               currentUserRole={staffRole}
             />
           )}
           {staffTab === "inventory" && ["admin","superadmin"].includes(staffRole) && (
             <InventoryView menu={menu} setMenu={setMenu} />
+          )}
+          {staffTab === "insumos" && ["admin","superadmin"].includes(staffRole) && (
+            <InsumosView menu={menu} insumos={insumos} setInsumos={setInsumos} recetas={recetas} setRecetas={setRecetas} />
           )}
           {staffTab === "egresos" && ["admin","superadmin"].includes(staffRole) && (
             <EgresosView egresos={egresos} setEgresos={setEgresos} />

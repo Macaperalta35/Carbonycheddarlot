@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { btPrinter } from "../services/bluetoothPrinter";
+import { deductInsumos } from "../lib/recetas";
 
-export default function POSView({ menu, setMenu, orders, setOrders, currentUserRole }) {
+export default function POSView({ menu, setMenu, orders, setOrders, insumos = [], setInsumos, recetas = [], currentUserRole }) {
+  // Descuenta insumos segun receta tras una venta (no bloquea el cobro si falla)
+  const applyInsumoDeduction = (soldItems) => {
+    if (!setInsumos) return;
+    const { insumos: updated, changed } = deductInsumos(soldItems, recetas, insumos);
+    if (changed) setInsumos(updated);
+  };
+
   const [activeCategory, setActiveCategory]   = useState("All");
   const [searchQuery,    setSearchQuery]       = useState("");
   const [ticketItems,    setTicketItems]       = useState([]);
@@ -213,6 +221,8 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
 
     setMenu(updatedMenu);
     setOrders([...orders, newOrder]);
+    // Descontar insumos segun receta de cada producto vendido
+    applyInsumoDeduction(ticketItems.map(i => ({ id: i.id, qty: i.qty })));
     setCompletedOrder(newOrder);
     setTicketItems([]);
     setDiscountPercent(0);
@@ -225,6 +235,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
     setOrders(orders.map(o => o.id === id ? { ...o, status: "Preparando" } : o));
 
   const handleCompleteOnline = (id, method) => {
+    const target = orders.find(o => o.id === id);
     setOrders(orders.map(o => {
       if (o.id === id) {
         const done = { ...o, status: "Completado", paymentMethod: method };
@@ -233,6 +244,8 @@ export default function POSView({ menu, setMenu, orders, setOrders, currentUserR
       }
       return o;
     }));
+    // Descontar insumos al entregar el pedido online
+    if (target?.items) applyInsumoDeduction(target.items.map(i => ({ id: i.id, qty: i.qty })));
   };
 
   /* ─── Impresión Bluetooth ───────────────────────────────── */

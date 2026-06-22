@@ -76,6 +76,28 @@ CREATE TABLE IF NOT EXISTS public.compras (
 );
 
 
+-- ── TABLA: insumos ────────────────────────────────────────────
+-- Inventario de materias primas / ingredientes (pan, carne, queso, etc.)
+CREATE TABLE IF NOT EXISTS public.insumos (
+  id          TEXT        PRIMARY KEY,
+  name        TEXT        NOT NULL DEFAULT '',
+  unit        TEXT        NOT NULL DEFAULT 'un',
+  stock       NUMERIC     NOT NULL DEFAULT 0,
+  "minStock"  NUMERIC     NOT NULL DEFAULT 0,
+  cost        INTEGER     NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── TABLA: recetas ────────────────────────────────────────────
+-- Relación producto → ingredientes. "id" = id del producto (menu_items).
+-- ingredients: [{ "insumoId": "...", "qty": 1 }]
+CREATE TABLE IF NOT EXISTS public.recetas (
+  id           TEXT        PRIMARY KEY,
+  "productName" TEXT       DEFAULT '',
+  ingredients  JSONB       DEFAULT '[]'::jsonb,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ================================================================
 -- SEGURIDAD: Row Level Security (RLS)
 -- Permite acceso completo con la anon key del proyecto.
@@ -86,6 +108,8 @@ ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.egresos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.compras    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.insumos    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recetas    ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: acceso completo para la clave anónima
 DROP POLICY IF EXISTS "anon_all_menu_items" ON public.menu_items;
@@ -104,6 +128,14 @@ DROP POLICY IF EXISTS "anon_all_compras" ON public.compras;
 CREATE POLICY "anon_all_compras" ON public.compras
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "anon_all_insumos" ON public.insumos;
+CREATE POLICY "anon_all_insumos" ON public.insumos
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_all_recetas" ON public.recetas;
+CREATE POLICY "anon_all_recetas" ON public.recetas
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
 
 -- ================================================================
 -- TIEMPO REAL: Habilitar Realtime para sincronización entre
@@ -114,3 +146,5 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.menu_items;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.egresos;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.compras;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.insumos;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.recetas;
