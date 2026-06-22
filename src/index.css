@@ -41,6 +41,24 @@
   box-sizing: border-box;
 }
 
+/* ── Tema claro: sobrescribe las variables base ───────────────
+   Los acentos (naranja/verde/etc.) y --text-dark (texto sobre
+   botones de color) se mantienen para preservar el contraste. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-dark: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-input: #eceef1;
+  --border-color: rgba(0, 0, 0, 0.12);
+
+  --text-main: #1a1a1f;
+  --text-muted: #5f636b;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.18);
+}
+
 body {
   margin: 0;
   background-color: var(--bg-dark);

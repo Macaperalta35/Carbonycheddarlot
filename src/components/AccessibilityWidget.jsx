@@ -5,6 +5,11 @@ export default function AccessibilityWidget() {
   const [open, setOpen] = useState(false);
   const [fontSize, setFontSize] = useLocalStorage("a11y_font_size", "normal");
   const [contrast, setContrast] = useLocalStorage("a11y_contrast", false);
+  const [theme, setTheme]       = useLocalStorage("cc_theme", "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -68,6 +73,17 @@ export default function AccessibilityWidget() {
           </div>
 
           <div className="a11y-section">
+            <p className="a11y-label">Tema</p>
+            <button
+              className={`a11y-toggle-contrast ${theme === "light" ? "active" : ""}`}
+              onClick={() => setTheme(t => (t === "light" ? "dark" : "light"))}
+              aria-pressed={theme === "light"}
+            >
+              {theme === "light" ? "☀️ Modo claro ON" : "🌙 Modo oscuro ON"}
+            </button>
+          </div>
+
+          <div className="a11y-section">
             <p className="a11y-label">Alto contraste</p>
             <button
               className={`a11y-toggle-contrast ${contrast ? "active" : ""}`}
@@ -82,7 +98,7 @@ export default function AccessibilityWidget() {
             <p className="a11y-label">Restablecer todo</p>
             <button
               className="a11y-reset"
-              onClick={() => { setFontSize("normal"); setContrast(false); }}
+              onClick={() => { setFontSize("normal"); setContrast(false); setTheme("dark"); }}
             >
               Restablecer valores
             </button>
