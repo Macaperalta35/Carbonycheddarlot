@@ -144,11 +144,21 @@ CREATE POLICY "anon_all_recetas" ON public.recetas
 -- ================================================================
 -- TIEMPO REAL: Habilitar Realtime para sincronización entre
 -- múltiples dispositivos (cajas, tablets, etc.)
+-- Idempotente: solo agrega las tablas que aún no están en la publicación,
+-- para poder re-ejecutar este script sin el error 42710.
 -- ================================================================
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.menu_items;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.egresos;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.compras;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.insumos;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.recetas;
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['menu_items','orders','egresos','compras','insumos','recetas'] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    END IF;
+  END LOOP;
+END $$;
