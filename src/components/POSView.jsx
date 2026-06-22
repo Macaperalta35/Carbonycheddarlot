@@ -281,6 +281,17 @@ export default function POSView({ menu, setMenu, orders, setOrders, insumos = []
 
   const onlineOrders = orders.filter(o => o.type === "Para Retirar" && o.status !== "Completado");
 
+  // Ventas cobradas hoy (historial del día para el cajero)
+  const isToday = (ts) => {
+    if (!ts) return false;
+    const d = new Date(ts), n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  };
+  const todaySales = orders
+    .filter(o => o.status === "Completado" && isToday(o.timestamp))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  const todayTotal = todaySales.reduce((s, o) => s + o.total, 0);
+
   const ProductCard = ({ item }) => {
     const qtyInTicket = ticketItems.filter(i => i.id === item.id).reduce((s, i) => s + i.qty, 0);
     const available   = Math.max(0, item.stock - qtyInTicket);
@@ -348,6 +359,14 @@ export default function POSView({ menu, setMenu, orders, setOrders, insumos = []
           >
             Pedidos Online{onlineOrders.length > 0 && (
               <span className="online-badge">{onlineOrders.length}</span>
+            )}
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "ingresados" ? "active" : ""}`}
+            onClick={() => setActiveTab("ingresados")}
+          >
+            Ventas Hoy{todaySales.length > 0 && (
+              <span className="online-badge">{todaySales.length}</span>
             )}
           </button>
         </div>
@@ -480,7 +499,7 @@ export default function POSView({ menu, setMenu, orders, setOrders, insumos = []
               Cobrar {formatCLP(total)}
             </button>
           </div>
-        ) : (
+        ) : activeTab === "online-orders" ? (
           /* Pedidos Online */
           <div className="online-orders-container">
             {onlineOrders.length === 0 ? (
@@ -536,6 +555,45 @@ export default function POSView({ menu, setMenu, orders, setOrders, insumos = []
                           </button>
                         </div>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Ventas de Hoy (historial del día, solo lectura) */
+          <div className="online-orders-container">
+            <div className="today-sales-summary">
+              <span>Ventas de hoy</span>
+              <strong>{formatCLP(todayTotal)}</strong>
+            </div>
+            {todaySales.length === 0 ? (
+              <div className="ticket-empty">
+                <span>📒</span>
+                <p>Aún no hay ventas cobradas hoy.</p>
+              </div>
+            ) : (
+              <div className="online-orders-list">
+                {todaySales.map(order => (
+                  <div key={order.id} className="online-order-card">
+                    <div className="online-card-header">
+                      <span className="order-number-badge">PEDIDO #{order.number}</span>
+                      <span className="meta-text">
+                        {order.timestamp ? new Date(order.timestamp).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : ""}
+                      </span>
+                    </div>
+                    <div className="online-card-items">
+                      {(order.items || []).map((i, idx) => (
+                        <div key={idx} className="online-item-line">
+                          <span>{i.emoji} {i.name} x{i.qty}</span>
+                          <span>{formatCLP(i.price * i.qty)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="online-card-total">
+                      <span>{order.type === "Para Retirar" ? `Retiro · ${order.customerName || ""}` : (order.table || order.type)} · 💳 {order.paymentMethod}</span>
+                      <strong>{formatCLP(order.total)}</strong>
                     </div>
                   </div>
                 ))}

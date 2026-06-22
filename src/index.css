@@ -3870,6 +3870,21 @@ html.a11y-contrast .category-pill.active {
    ══════════════════════════════════════════════════ */
 .cv-install-slot { padding: 0 16px; }
 .cv-install-slot:empty { display: none; }
+
+/* Resumen "Ventas de Hoy" en el POS */
+.today-sales-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.today-sales-summary strong { color: var(--color-success); font-size: 1.2rem; }
 /* Filtro de categorías */
 .cv-cat-scroll {
   display: flex;
