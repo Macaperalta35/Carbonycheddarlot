@@ -836,6 +836,9 @@ body {
   width: 90%;
   max-width: 480px;
   box-shadow: var(--shadow-lg);
+  /* Evita que un modal alto (ej. con receta) se salga de la pantalla */
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-content h2 {
