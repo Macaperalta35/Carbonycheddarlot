@@ -30,13 +30,16 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
     setLsData(data);
   }, [setLsData]);
 
-  // Aplica el merge de schema: initialData con stock de DB, descarta items huérfanos
+  // Merge de schema: el conjunto de productos lo define el código (initialData),
+  // pero para los productos que YA existen en la base de datos, los datos de la
+  // base mandan (nombre, precio, stock, etc.). Así las ediciones hechas desde el
+  // panel persisten, y el código sigue pudiendo agregar productos nuevos.
   const applyMerge = useCallback((rows) => {
-    const rowMap  = new Map(rows.map(r => [String(r.id), r]));
-    return initialData.map(init => ({
-      ...init,
-      stock: rowMap.has(String(init.id)) ? rowMap.get(String(init.id)).stock : init.stock,
-    }));
+    const rowMap = new Map(rows.map(r => [String(r.id), r]));
+    return initialData.map(init => {
+      const dbRow = rowMap.get(String(init.id));
+      return dbRow ? { ...init, ...dbRow } : init;
+    });
   }, [initialData]);
 
   useEffect(() => {
