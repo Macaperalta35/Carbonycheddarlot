@@ -1,126 +1,68 @@
-# 🍔 Carbon & Cheddar Lota — Sistema POS & Delivery
+# 🍔 Carbon & Cheddar Lota — Sistema POS & Pedidos
 
-> Sistema de punto de venta (POS) interactivo y plataforma de pedidos web para el restaurant **Carbon & Cheddar**, ubicado en Lota, Chile. Inspirado en la interfaz de Loyverse y optimizado para funcionar como Progressive Web App (PWA) instalable en cualquier dispositivo.
+> Sistema de punto de venta (POS), gestión de restaurant y pedidos online para **Carbon & Cheddar**, ubicado en Lota, Chile. Funciona como **Progressive Web App (PWA)** instalable, con base de datos en la nube (**Supabase**) y sincronización en tiempo real entre dispositivos.
+
+---
+
+## 🆕 Novedades recientes
+
+Cambios incorporados en la rama de desarrollo (ver detalle de cada uno más abajo):
+
+| # | Cambio | Dónde |
+|---|---|---|
+| 🛍️ | **Pedido online del cliente** con botón "Enviar pedido" (carrito + datos de retiro) que llega al POS en *Pedidos Online* | [CustomerView.jsx](src/components/CustomerView.jsx) |
+| 📲 | **Botón "Instalar app"** ahora visible también para el cliente (Android/Chrome automático; iPhone con instrucciones) | [InstallButton.jsx](src/components/InstallButton.jsx) |
+| 🥬 | **Insumos y recetas**: inventario de ingredientes + receta por producto; al vender, descuenta los insumos automáticamente | [InsumosView.jsx](src/components/InsumosView.jsx) · [recetas.js](src/lib/recetas.js) |
+| 🌓 | **Modo claro / oscuro** con interruptor persistente (botón de accesibilidad ♿) | [AccessibilityWidget.jsx](src/components/AccessibilityWidget.jsx) |
+| 📶 | **Sesión offline**: el login del personal se mantiene al recargar y los datos quedan cacheados para funcionar sin internet | [useSupabaseData.js](src/hooks/useSupabaseData.js) |
+| 👤 | **Registro / login de clientes por email** (Supabase Auth) con **consentimiento** y política de privacidad | [auth.js](src/lib/auth.js) · [CustomerView.jsx](src/components/CustomerView.jsx) |
+| 🔒 | **Guía de seguridad y cumplimiento legal (Chile)** — Ley 19.628 / 21.719 / 21.663 | [docs/SEGURIDAD.md](docs/SEGURIDAD.md) |
 
 ---
 
 ## 📋 Descripción General
 
-Este sistema integra dos interfaces en una sola aplicación web:
+El sistema integra dos experiencias en una sola app web:
 
-- **Panel de Cajero / POS (Personal del local):** Cuadrícula de productos al estilo Loyverse, gestión del ticket de venta con descuentos por ítem, selección de tamaño para papas fritas, calculadora de vuelto en efectivo, cola de pedidos online entrantes y generación de boleta en el formato oficial del local.
+- **Personal del local (POS):** acceso por URL con `?pos=1`. Ventas, inventario, insumos, compras, egresos, reportes, carta y configuración, según el rol.
+- **Cliente:** acceso por la URL normal (sin `?pos=1`). Ve la carta, instala la app y hace pedidos online para retirar.
 
-- **Portal de Pedidos para Clientes:** Menú interactivo con descripción de cada producto, precios con IVA incluido (19%), control de stock en tiempo real, carro de compras y formulario de retiro en local. Al enviar, el pedido aparece automáticamente en la cola del cajero.
+Los datos se guardan en **Supabase** (PostgreSQL + Realtime + Auth) y, si no hay conexión o no está configurado, la app usa **localStorage** como respaldo offline automático.
 
 ---
 
-## ✨ Funcionalidades Principales
+## ✨ Funcionalidades
 
-### Panel del Personal (POS)
+### 🧾 Ventas / POS
 | Función | Descripción |
 |---|---|
-| 🛒 Ticket de Venta | Agrega, edita y elimina productos directamente en el ticket |
-| 🗑️ Eliminación Directa | Botón de papelera por ítem para retirar de la boleta al instante |
-| 💸 Descuento por Ítem | Haz clic sobre cualquier producto del ticket para aplicar un descuento individual (0% a 50%) |
-| 📊 Descuento General | Selector de descuento sobre el total completo del ticket (0% a 20%) |
-| 🔥 Detección de Combos | Detecta automáticamente Hamburguesa + Acompañamiento + Bebida y propone 10% de descuento |
-| 💵 Calculadora de Vuelto | Calcula el vuelto automático al recibir efectivo, con botones de montos rápidos |
-| 🧾 Boleta Oficial | Genera el ticket en el formato estándar del local, desglosando descuentos por línea |
-| 🔔 Pedidos Online | Cola de pedidos enviados por clientes desde el portal web con estado "Pendiente/Preparando/Completado" |
-| 🍟 Variantes de Tamaño | Selector de tamaño (Individual, Mediana, Grande) para todas las variedades de papas fritas |
+| Ticket de venta | Agrega, edita y elimina productos; cantidades y notas |
+| Descuento por ítem y general | Descuentos individuales y sobre el total |
+| Calculadora de vuelto | Vuelto automático en efectivo con montos rápidos |
+| Medios de pago | Efectivo, Tarjeta y Transferencia |
+| Pedidos Online | Cola de pedidos del cliente (Pendiente → Preparando → Completado) |
+| Impresión térmica Bluetooth | Boleta por impresora ESC/POS vía Bluetooth |
+| Descuento de insumos | Al cobrar, descuenta los ingredientes según la receta |
 
-### Portal del Cliente
+### 🛍️ Portal del Cliente
 | Función | Descripción |
 |---|---|
-| 🗂️ Filtro por Categoría | Filtra entre Burgers, Completos, Almuerzos, Niños, Sides, Drinks y Desserts |
-| 📦 Control de Stock | Muestra el stock real y advierte cuando hay menos de 5 unidades disponibles |
-| 🛍️ Carro de Compras | Añade y ajusta cantidades en tiempo real |
-| 📝 Formulario de Retiro | Ingresa nombre, teléfono y tiempo estimado de retiro |
-| 📄 Descarga Carta PDF | Exporta el menú completo en formato PDF usando el sistema de impresión nativo del navegador |
+| Carta de imágenes | Galería de la carta con visor ampliable |
+| Pedido online | Filtro por categoría, carrito y envío del pedido |
+| Cuenta de cliente | Registro / inicio de sesión por email |
+| Instalar app | Botón para instalar la PWA en el celular |
+| Privacidad | Consentimiento de datos y política de privacidad visibles |
 
-### Panel de Administración (rol: Admin)
-| Función | Descripción |
-|---|---|
-| 🔐 PIN de Seguridad | El acceso al panel de Admin requiere PIN de 4 dígitos (`1234` en modo simulación) |
-| 📦 Gestión de Inventario | Edita nombre, precio, descripción, categoría y stock de cualquier producto |
-| ➕ Carga Rápida de Stock | Agrega +5 unidades al stock de cualquier ítem con un solo clic |
-| ⚠️ Alertas de Stock Crítico | Destacado visual en rojo/naranja para productos con menos de 5 unidades |
-| 📊 Informes de Ventas | Métricas del día: ingresos totales, cantidad de pedidos, ticket promedio |
-| 💳 Desglose por Pago | Distribución visual de ventas por Efectivo, Tarjeta y Transferencia |
-| 📝 Entrega de Turno | Minuta automática listo para copiar al portapapeles y enviar por WhatsApp o correo |
-
----
-
-## 🛠️ Tecnologías Utilizadas
-
-| Tecnología | Uso |
-|---|---|
-| **React 19** | Framework principal de la interfaz |
-| **Vite 8** | Bundler y servidor de desarrollo |
-| **CSS Variables + Vanilla CSS** | Sistema de diseño en modo oscuro con variables HSL personalizadas |
-| **Google Fonts - Outfit** | Tipografía moderna premium |
-| **LocalStorage + Custom Hook** | Persistencia del menú, pedidos e inventario con sincronización entre pestañas |
-| **PWA (Service Worker + Manifest)** | Instalación en Android, iOS y escritorio como aplicación nativa |
-| **@media print** | Exportación del menú a PDF sin dependencias externas |
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-carbon-cheddar-pos/
-├── public/
-│   ├── manifest.json       → Configuración de la PWA (íconos, tema, nombre)
-│   └── sw.js               → Service Worker para funcionamiento offline
-├── src/
-│   ├── components/
-│   │   ├── CustomerView.jsx  → Vista pública del cliente (menú + carro + PDF)
-│   │   ├── POSView.jsx       → Panel del cajero estilo Loyverse
-│   │   ├── InventoryView.jsx → Gestión de inventario (solo Admin)
-│   │   └── ReportsView.jsx   → Reportes y cierre de turno (solo Admin)
-│   ├── data/
-│   │   └── menu.js           → Carta oficial de Carbon & Cheddar con variantes de papas
-│   ├── hooks/
-│   │   └── useLocalStorage.js → Hook personalizado de persistencia con sync multi-pestaña
-│   ├── App.jsx               → Enrutador principal y gestión de roles (Cajero / Admin)
-│   ├── main.jsx              → Punto de entrada y registro del Service Worker
-│   └── index.css             → Hoja de estilos global (modo oscuro, responsive, @media print)
-├── index.html                → HTML base con SEO, manifest y meta tags
-├── vite.config.js
-└── package.json
-```
-
----
-
-## 🚀 Instalación y Ejecución
-
-### Pre-requisitos
-- **Node.js** versión 18 o superior
-- **npm** versión 9 o superior
-
-### Pasos
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/Macaperalta35/Carbonycheddarlot.git
-cd Carbonycheddarlot
-
-# 2. Instalar dependencias
-npm install
-
-# 3. Iniciar el servidor de desarrollo local
-npm run dev
-```
-
-Abre tu navegador en `http://localhost:5173` para acceder al sistema.
-
-### Comandos Disponibles
-
-```bash
-npm run dev      # Servidor de desarrollo con HMR (recarga instantánea)
-npm run build    # Compilar para producción (genera carpeta /dist)
-npm run preview  # Previsualizar el bundle de producción localmente
-```
+### 🔑 Administración
+| Módulo | Descripción | Componente |
+|---|---|---|
+| 📦 Inventario | Stock, precios y datos de cada producto | [InventoryView.jsx](src/components/InventoryView.jsx) |
+| 🥬 Insumos & Recetas | Inventario de ingredientes y receta por producto | [InsumosView.jsx](src/components/InsumosView.jsx) |
+| 🛒 Compras | Registro de boletas/facturas de proveedores | [ComprasView.jsx](src/components/ComprasView.jsx) |
+| 💸 Egresos | Gastos y servicios (luz, agua, gas, etc.) | [EgresosView.jsx](src/components/EgresosView.jsx) |
+| 📊 Reportes | Métricas de ventas, egresos y resultado | [ReportsView.jsx](src/components/ReportsView.jsx) |
+| 📄 Carta PDF | Gestión y exportación de la carta digital | [CartaView.jsx](src/components/CartaView.jsx) |
+| ⚙️ Configuración | PIN de acceso y ajustes (solo Super Admin) | [SettingsView.jsx](src/components/SettingsView.jsx) |
 
 ---
 
@@ -128,39 +70,128 @@ npm run preview  # Previsualizar el bundle de producción localmente
 
 | Rol | Cómo acceder | Permisos |
 |---|---|---|
-| **Cajero** | Predeterminado al abrir la aplicación | Ventas, pedidos online, cobros |
-| **Administrador** | Selector de rol → ingresar PIN `1234` | Todo lo anterior + Inventario, Reportes y cierre de turno |
-| **Cliente** | Clic en el botón "Ver Menú Cliente" | Menú interactivo, pedidos para retirar, descarga de carta PDF |
+| **Cajero** | Por defecto al abrir con `?pos=1` | Ventas, pedidos online, Carta PDF |
+| **Administrador** | Selector de rol → PIN (`1234` por defecto) | Todo lo del cajero + Inventario, Insumos, Compras, Egresos, Reportes |
+| **Super Admin** | Selector de rol → PIN (`9999` por defecto) | Todo lo anterior + Configuración |
+| **Cliente** | URL sin `?pos=1` | Carta, pedidos online (con cuenta), instalar app |
 
-> ⚠️ **Nota:** El PIN `1234` es el PIN de simulación para demostración. En un entorno de producción real, se recomienda conectar un sistema de autenticación seguro (ej. JWT, Clerk, Firebase Auth).
+> ⚠️ Los PIN se pueden cambiar en **Configuración**. Se guardan en el navegador; para producción revisa el endurecimiento recomendado en [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
 ---
 
-## 🗂️ Carta de Productos
+## 🛠️ Tecnologías
 
-El sistema incluye las categorías y productos reales de **Carbon & Cheddar Lota**:
-
-| Categoría | Productos |
+| Tecnología | Uso |
 |---|---|
-| 🍔 Burgers | Hamburguesa Carbon, Cheddar, Doble, Bacon, Veggie, A lo Pobre |
-| 🥖 Completos | Completo Italiano, Dinámico, Americano |
-| 🍽️ Almuerzos | Pasta del Día, Lasaña, Ensaladas, Milanesa Lotina, Fetuccinis |
-| 👶 Niños | Salchipapas, Mini Burger Cheddar, Fetuccini Boloñesa (todos con Refreskid) |
-| 🍟 Sides (Papas Fritas) | 10 variedades con tamaños Individual / Mediana / Grande |
-| 🥤 Drinks | Coca-Cola, Agua Mineral, Jugo Natural, Milkshake, Cerveza Artesanal |
-| 🍰 Desserts | Helado, Torta del Día, Brownie |
-
-> 💰 **Todos los precios incluyen el 19% de IVA.**
+| **React 19 + Vite 8** | Interfaz y bundler |
+| **Supabase** (`@supabase/supabase-js`) | Base de datos PostgreSQL, Realtime y Auth |
+| **PWA** (Service Worker + Manifest) | Instalación y funcionamiento offline |
+| **Web Bluetooth** | Impresión térmica ESC/POS |
+| **pdfjs-dist / qrcode** | Carta en PDF y códigos QR |
+| **CSS Variables** | Temas claro/oscuro y accesibilidad |
 
 ---
 
-## 📱 Instalación como App (PWA)
+## 📁 Estructura del Proyecto
 
-El sistema está configurado como Progressive Web App. Para instalarlo en tu dispositivo:
+```
+Carbonycheddarlot/
+├── public/
+│   └── sw.js                      → Service Worker (offline/PWA)
+├── src/
+│   ├── components/
+│   │   ├── CustomerView.jsx       → Vista del cliente (carta + pedido online + login)
+│   │   ├── POSView.jsx            → Punto de venta del personal
+│   │   ├── InventoryView.jsx      → Inventario de productos
+│   │   ├── InsumosView.jsx        → Insumos y recetas
+│   │   ├── ComprasView.jsx        → Compras a proveedores
+│   │   ├── EgresosView.jsx        → Egresos y servicios
+│   │   ├── ReportsView.jsx        → Reportes y cierre
+│   │   ├── CartaView.jsx          → Carta digital / PDF
+│   │   ├── SettingsView.jsx       → Configuración (Super Admin)
+│   │   ├── AccessibilityWidget.jsx→ Accesibilidad + tema claro/oscuro
+│   │   └── InstallButton.jsx      → Instalación de la PWA
+│   ├── hooks/
+│   │   ├── useSupabaseData.js     → Datos en Supabase con respaldo offline
+│   │   ├── useLocalStorage.js     → Persistencia local
+│   │   └── useCartaImages.js      → Imágenes de la carta
+│   ├── lib/
+│   │   ├── supabase.js            → Cliente de Supabase
+│   │   ├── auth.js                → Login de clientes (email)
+│   │   └── recetas.js             → Descuento de insumos por receta
+│   ├── services/
+│   │   └── bluetoothPrinter.js    → Impresión térmica Bluetooth
+│   ├── data/
+│   │   ├── menu.js                → Carta de productos
+│   │   └── insumos.js             → Insumos iniciales
+│   └── App.jsx                    → Enrutador, roles y estado global
+├── supabase/
+│   └── schema.sql                 → Esquema de la base de datos
+├── docs/
+│   └── SEGURIDAD.md               → Seguridad y cumplimiento legal (Chile)
+└── package.json
+```
 
-- **Android:** Abre el sitio en Chrome → Menú (⋮) → "Agregar a pantalla de inicio"
-- **iPhone / iPad:** Abre el sitio en Safari → Botón de Compartir → "Agregar a inicio"
-- **Windows / Mac:** Abre el sitio en Chrome/Edge → Icono de instalación en la barra de direcciones
+---
+
+## 🚀 Instalación y Ejecución
+
+### Requisitos
+- **Node.js** 18+ y **npm** 9+
+
+### Pasos
+```bash
+git clone https://github.com/Macaperalta35/Carbonycheddarlot.git
+cd Carbonycheddarlot
+npm install
+npm run dev
+```
+Abre `http://localhost:5173`. Para el panel del personal usa `http://localhost:5173/?pos=1`.
+
+### Comandos
+```bash
+npm run dev      # Servidor de desarrollo
+npm run build    # Compilar para producción (carpeta /dist)
+npm run preview  # Previsualizar el build
+npm run deploy   # Publicar en GitHub Pages
+```
+
+---
+
+## ☁️ Configuración de Supabase
+
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. En **SQL Editor**, pega y ejecuta [supabase/schema.sql](supabase/schema.sql) (es re-ejecutable sin errores).
+3. Crea un archivo `.env` en la raíz con tus credenciales (*Project Settings → API*):
+   ```
+   VITE_SUPABASE_URL=https://TU_PROJECT_ID.supabase.co
+   VITE_SUPABASE_ANON_KEY=TU_ANON_KEY
+   ```
+4. Para el **login de clientes**: *Authentication → Providers → Email* habilitado. Para registro inmediato, desactiva *"Confirm email"*.
+
+> Si no configuras Supabase, la app funciona igual usando `localStorage` (sin sincronización entre dispositivos).
+
+---
+
+## 🖨️ Impresión Térmica (Bluetooth)
+
+Desde el POS puedes conectar una impresora térmica **ESC/POS** por Bluetooth (Web Bluetooth) para imprimir la boleta. Funciona en **Chrome/Edge en Android, Windows, Mac y Linux**. En iPhone/iPad se usa la impresión del sistema (AirPrint) como respaldo.
+
+---
+
+## 🔒 Seguridad y Privacidad
+
+El sistema maneja datos de clientes (nombre, email, teléfono) bajo la legislación chilena (**Ley 19.628**, **Ley 21.719**, **Ley 21.663**). Incluye consentimiento y política de privacidad para el cliente.
+
+➡️ Revisa el checklist y los pendientes de endurecimiento en **[docs/SEGURIDAD.md](docs/SEGURIDAD.md)**.
+
+---
+
+## 📱 Instalar como App (PWA)
+
+- **Android:** Chrome → botón "Instalar app" o Menú (⋮) → "Agregar a pantalla de inicio".
+- **iPhone / iPad:** Safari → Compartir → "Agregar a inicio".
+- **Windows / Mac:** Chrome/Edge → ícono de instalación en la barra de direcciones.
 
 ---
 
@@ -168,7 +199,7 @@ El sistema está configurado como Progressive Web App. Para instalarlo en tu dis
 
 | Dato | Información |
 |---|---|
-| 📍 Ubicación | Lota Alto, Biobío, Chile |
+| 📍 Dirección | Carlos Cousiño 215, Lota Alto, Biobío, Chile |
 | 📱 Teléfono | +56 9 8417 0433 |
 | 📸 Instagram | [@carbonycheddarlota](https://instagram.com/carbonycheddarlota) |
 
@@ -176,8 +207,8 @@ El sistema está configurado como Progressive Web App. Para instalarlo en tu dis
 
 ## 📄 Licencia
 
-Este proyecto fue desarrollado específicamente para uso interno de **Carbon & Cheddar Lota**. Todos los derechos del diseño gráfico del local (logo, menú) pertenecen al restaurant.
+Proyecto de uso interno para **Carbon & Cheddar Lota**. Los derechos del diseño gráfico (logo, carta) pertenecen al restaurant.
 
 ---
 
-*Sistema desarrollado con ❤️ por Lilith para Carbon & Cheddar Lota.*
+*Hecho con ❤️ por LILITH para Carbon & Cheddar Lota.*
