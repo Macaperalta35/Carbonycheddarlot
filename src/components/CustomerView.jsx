@@ -1,6 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import logoUrl from "../assets/logo.js";
 import InstallButton from "./InstallButton";
+import {
+  authAvailable, registerCustomer, loginCustomer, logoutCustomer,
+  getCurrentSession, onAuthChange,
+} from "../lib/auth.js";
 
 const formatCLP = (v) =>
   new Intl.NumberFormat("es-CL", {
@@ -80,6 +84,61 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
   const [placedOrder, setPlaced]    = useState(null);
   const [formError, setFormError]   = useState("");
 
+  // ── Cuenta del cliente (Supabase Auth) ──
+  const [session, setSession]       = useState(null);
+  const [authMode, setAuthMode]     = useState("login"); // 'login' | 'register'
+  const [authEmail, setAuthEmail]   = useState("");
+  const [authPass, setAuthPass]     = useState("");
+  const [consent, setConsent]       = useState(false);
+  const [authMsg, setAuthMsg]       = useState("");
+  const [authBusy, setAuthBusy]     = useState(false);
+
+  useEffect(() => {
+    if (!authAvailable) return;
+    getCurrentSession().then(setSession);
+    const unsub = onAuthChange(setSession);
+    return unsub;
+  }, []);
+
+  // Prefill de nombre/teléfono desde la cuenta
+  useEffect(() => {
+    if (session?.user) {
+      const m = session.user.user_metadata || {};
+      if (m.name && !customerName) setName(m.name);
+      if (m.phone && !phone) setPhone(m.phone);
+    }
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isLoggedIn = !authAvailable || !!session; // si no hay Supabase, flujo anónimo
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthMsg("");
+    if (!authEmail.trim() || !authPass) { setAuthMsg("Ingresa tu email y contraseña."); return; }
+    if (authMode === "register" && !consent) {
+      setAuthMsg("Debes aceptar el tratamiento de tus datos para registrarte.");
+      return;
+    }
+    setAuthBusy(true);
+    try {
+      const res = authMode === "register"
+        ? await registerCustomer({ email: authEmail, password: authPass, name: customerName, phone })
+        : await loginCustomer({ email: authEmail, password: authPass });
+      if (res.error) { setAuthMsg(res.error); }
+      else if (res.needsConfirmation) {
+        setAuthMsg("Te enviamos un correo para confirmar tu cuenta. Confírmalo y vuelve a iniciar sesión.");
+        setAuthMode("login");
+      } else {
+        setSession(res.session);
+        setAuthPass("");
+      }
+    } catch (err) {
+      setAuthMsg(err.message || "Error de autenticación.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   const categories = useMemo(
     () => ["Todos", ...Array.from(new Set(menu.map(i => i.category)))],
     [menu]
@@ -137,6 +196,7 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
       cashReceived:  null,
       notes:         "",
       customerName:  customerName.trim(),
+      customerEmail: session?.user?.email || "",
       phone:         phone.trim(),
       pickupTime:    `${pickupMin} min`,
       status:        "Pendiente",
@@ -231,6 +291,18 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
         <CartaGaleria images={cartaImages} loading={cartaLoading} />
       </section>
 
+      {/* Política de privacidad (Ley 19.628 / 21.719) */}
+      <section className="cv-section cv-privacy" id="cv-privacidad">
+        <h2 className="cv-section-title">Privacidad y datos</h2>
+        <p className="cv-privacy-text">
+          Carbon &amp; Cheddar recopila tu <strong>nombre, email y teléfono</strong> con el único
+          fin de gestionar y entregar tus pedidos. No compartimos tus datos con terceros con fines
+          publicitarios. Puedes solicitar acceder, rectificar o eliminar tus datos escribiéndonos al{" "}
+          <strong>+56 9 8417 0433</strong>. El tratamiento se realiza conforme a la Ley 19.628 y a la
+          Ley 21.719 de protección de datos personales de Chile.
+        </p>
+      </section>
+
       {/* Footer */}
       <footer className="cv-footer">
         <p>📞 +56 9 8417 0433 &nbsp;·&nbsp; Lota, Chile</p>
@@ -287,49 +359,121 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
               ))}
             </div>
 
-            <form className="cv-cart-form" onSubmit={handleSubmit}>
-              <div className="cv-cart-total-row">
-                <span>Total</span>
-                <strong>{formatCLP(cartTotal)}</strong>
-              </div>
+            {!isLoggedIn ? (
+              /* Gate de cuenta: login o registro antes de pedir */
+              <form className="cv-cart-form" onSubmit={handleAuth}>
+                <div className="cv-cart-total-row">
+                  <span>Total</span>
+                  <strong>{formatCLP(cartTotal)}</strong>
+                </div>
+                <p className="cv-auth-intro">
+                  {authMode === "register"
+                    ? "Crea tu cuenta para enviar pedidos"
+                    : "Inicia sesión para enviar tu pedido"}
+                </p>
 
-              <label className="cv-cart-label">Tu nombre *</label>
-              <input
-                className="cv-cart-input"
-                type="text"
-                value={customerName}
-                onChange={(e) => { setName(e.target.value); setFormError(""); }}
-                placeholder="Ej: María González"
-              />
+                <label className="cv-cart-label">Email *</label>
+                <input
+                  className="cv-cart-input"
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => { setAuthEmail(e.target.value); setAuthMsg(""); }}
+                  placeholder="tucorreo@email.com"
+                  autoComplete="email"
+                />
 
-              <label className="cv-cart-label">Teléfono *</label>
-              <input
-                className="cv-cart-input"
-                type="tel"
-                value={phone}
-                onChange={(e) => { setPhone(e.target.value); setFormError(""); }}
-                placeholder="Ej: +56 9 1234 5678"
-              />
+                <label className="cv-cart-label">Contraseña *</label>
+                <input
+                  className="cv-cart-input"
+                  type="password"
+                  value={authPass}
+                  onChange={(e) => { setAuthPass(e.target.value); setAuthMsg(""); }}
+                  placeholder="Mínimo 6 caracteres"
+                  autoComplete={authMode === "register" ? "new-password" : "current-password"}
+                />
 
-              <label className="cv-cart-label">¿En cuánto tiempo lo retiras?</label>
-              <select
-                className="cv-cart-input"
-                value={pickupMin}
-                onChange={(e) => setPickupMin(e.target.value)}
-              >
-                <option value="15">En 15 minutos</option>
-                <option value="30">En 30 minutos</option>
-                <option value="45">En 45 minutos</option>
-                <option value="60">En 1 hora</option>
-              </select>
+                {authMode === "register" && (
+                  <label className="cv-consent">
+                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <span>
+                      Acepto el tratamiento de mis datos (nombre, email y teléfono) para gestionar
+                      mis pedidos, conforme a la Ley 19.628 / 21.719 de protección de datos. Ver{" "}
+                      <a href="#privacidad" onClick={(e) => { e.preventDefault(); document.getElementById("cv-privacidad")?.scrollIntoView({ behavior: "smooth" }); setCartOpen(false); }}>
+                        política de privacidad
+                      </a>.
+                    </span>
+                  </label>
+                )}
 
-              {formError && <p className="cv-cart-error">{formError}</p>}
+                {authMsg && <p className="cv-cart-error">{authMsg}</p>}
 
-              <button type="submit" className="cv-cart-submit">
-                Enviar pedido · {formatCLP(cartTotal)}
-              </button>
-              <p className="cv-cart-note">El pago se realiza al retirar en el local.</p>
-            </form>
+                <button type="submit" className="cv-cart-submit" disabled={authBusy}>
+                  {authBusy ? "Procesando…" : authMode === "register" ? "Registrarme" : "Iniciar sesión"}
+                </button>
+                <button
+                  type="button"
+                  className="cv-auth-switch"
+                  onClick={() => { setAuthMode(m => (m === "register" ? "login" : "register")); setAuthMsg(""); }}
+                >
+                  {authMode === "register"
+                    ? "¿Ya tienes cuenta? Inicia sesión"
+                    : "¿No tienes cuenta? Regístrate"}
+                </button>
+              </form>
+            ) : (
+              <form className="cv-cart-form" onSubmit={handleSubmit}>
+                <div className="cv-cart-total-row">
+                  <span>Total</span>
+                  <strong>{formatCLP(cartTotal)}</strong>
+                </div>
+
+                <label className="cv-cart-label">Tu nombre *</label>
+                <input
+                  className="cv-cart-input"
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => { setName(e.target.value); setFormError(""); }}
+                  placeholder="Ej: María González"
+                />
+
+                <label className="cv-cart-label">Teléfono *</label>
+                <input
+                  className="cv-cart-input"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setFormError(""); }}
+                  placeholder="Ej: +56 9 1234 5678"
+                />
+
+                <label className="cv-cart-label">¿En cuánto tiempo lo retiras?</label>
+                <select
+                  className="cv-cart-input"
+                  value={pickupMin}
+                  onChange={(e) => setPickupMin(e.target.value)}
+                >
+                  <option value="15">En 15 minutos</option>
+                  <option value="30">En 30 minutos</option>
+                  <option value="45">En 45 minutos</option>
+                  <option value="60">En 1 hora</option>
+                </select>
+
+                {formError && <p className="cv-cart-error">{formError}</p>}
+
+                <button type="submit" className="cv-cart-submit">
+                  Enviar pedido · {formatCLP(cartTotal)}
+                </button>
+                <p className="cv-cart-note">
+                  El pago se realiza al retirar en el local.
+                  {authAvailable && session?.user?.email && (
+                    <> · {session.user.email} ·{" "}
+                      <button type="button" className="cv-auth-link" onClick={() => { logoutCustomer(); setSession(null); }}>
+                        Salir
+                      </button>
+                    </>
+                  )}
+                </p>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -35,12 +35,16 @@ CREATE TABLE IF NOT EXISTS public.orders (
   "cashReceived"   INTEGER,
   notes            TEXT        DEFAULT '',
   "customerName"   TEXT        DEFAULT '',
+  "customerEmail"  TEXT        DEFAULT '',
   phone            TEXT        DEFAULT '',
   "pickupTime"     TEXT        DEFAULT '',
   status           TEXT        DEFAULT 'Pendiente',
   timestamp        BIGINT,
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migración para bases ya creadas (agrega columnas nuevas si faltan):
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS "customerEmail" TEXT DEFAULT '';
 
 -- ── TABLA: egresos ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.egresos (

@@ -4099,6 +4099,50 @@ html.a11y-contrast .category-pill.active {
 .cv-cart-submit:hover { background: #ffa733; }
 .cv-cart-note { text-align: center; font-size: 0.75rem; color: #777; margin: 10px 0 0; }
 
+/* Cuenta del cliente (login/registro) */
+.cv-auth-intro { color: #ddd; font-size: 0.9rem; margin: 4px 0 8px; }
+.cv-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 4px;
+  font-size: 0.78rem;
+  color: #bbb;
+  line-height: 1.4;
+}
+.cv-consent input { margin-top: 3px; flex-shrink: 0; }
+.cv-consent a { color: #ff9100; }
+.cv-auth-switch {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ff9100;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  padding: 6px;
+}
+.cv-auth-link {
+  background: none;
+  border: none;
+  color: #ff9100;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Privacidad */
+.cv-privacy { padding-top: 0; }
+.cv-privacy-text {
+  font-size: 0.82rem;
+  color: #999;
+  line-height: 1.55;
+  max-width: 800px;
+}
+.cv-privacy-text strong { color: #bbb; }
+
 /* Confirmación */
 .cv-success-modal { text-align: center; }
 .cv-success-icon { font-size: 3rem; }
