@@ -13,6 +13,7 @@ import EgresosView   from "./components/EgresosView";
 import ComprasView   from "./components/ComprasView";
 import SettingsView           from "./components/SettingsView";
 import InsumosView            from "./components/InsumosView";
+import HistorialView          from "./components/HistorialView";
 import CartaView             from "./components/CartaView";
 import AccessibilityWidget   from "./components/AccessibilityWidget";
 import { useCartaImages }    from "./hooks/useCartaImages";
@@ -25,6 +26,7 @@ const TABS = [
   { id: "insumos",   label: "Insumos",       icon: "🥬", roles: ["admin", "superadmin"] },
   { id: "egresos",   label: "Egresos",       icon: "💸", roles: ["admin", "superadmin"] },
   { id: "compras",   label: "Compras",       icon: "🛒", roles: ["admin", "superadmin"] },
+  { id: "historial", label: "Historial",     icon: "📒", roles: ["admin", "superadmin"] },
   { id: "reports",   label: "Reportes",      icon: "📊", roles: ["admin", "superadmin"] },
   { id: "carta",     label: "Carta PDF",     icon: "📄", roles: ["cajero", "admin", "superadmin"] },
   { id: "settings",  label: "Configuración", icon: "⚙️", roles: ["superadmin"] },
@@ -204,6 +206,9 @@ export default function App() {
           )}
           {staffTab === "compras" && ["admin","superadmin"].includes(staffRole) && (
             <ComprasView compras={compras} setCompras={setCompras} />
+          )}
+          {staffTab === "historial" && ["admin","superadmin"].includes(staffRole) && (
+            <HistorialView orders={orders} setOrders={setOrders} />
           )}
           {staffTab === "reports" && ["admin","superadmin"].includes(staffRole) && (
             <ReportsView menu={menu} orders={orders} egresos={egresos} compras={compras} />
