@@ -14,11 +14,21 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
   const { orderBy = 'created_at', orderAsc = false, mergeSchema = false } = options;
 
   const [lsData, setLsData] = useLocalStorage(localKey, initialData);
-  const [sbData, setSbData] = useState(initialData);
-  const [loading, setLoading] = useState(isConfigured);
+  // Offline-first: arrancamos con la última copia local cacheada (si existe),
+  // así la app muestra datos al instante aunque no haya internet.
+  const [sbData, setSbData] = useState(lsData);
+  // Solo bloqueamos con spinner si NO hay nada cacheado todavía.
+  const [loading, setLoading] = useState(isConfigured && (!lsData || lsData.length === 0));
 
-  const prevRef  = useRef(initialData);
+  const prevRef  = useRef(lsData);
   const readyRef = useRef(false);
+
+  // Guarda en estado + caché local (para sobrevivir sin conexión y entre recargas)
+  const commit = useCallback((data) => {
+    setSbData(data);
+    prevRef.current = data;
+    setLsData(data);
+  }, [setLsData]);
 
   // Aplica el merge de schema: initialData con stock de DB, descarta items huérfanos
   const applyMerge = useCallback((rows) => {
@@ -67,17 +77,14 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
             await supabase.from(tableName).upsert(toUpsert, { onConflict: 'id' });
           }
 
-          setSbData(merged);
-          prevRef.current = merged;
+          commit(merged);
         } else {
-          setSbData(rows);
-          prevRef.current = rows;
+          commit(rows);
         }
       } else if (initialData.length > 0) {
         const { error: seedErr } = await supabase.from(tableName).insert(initialData);
         if (!seedErr) {
-          setSbData(initialData);
-          prevRef.current = initialData;
+          commit(initialData);
         } else {
           console.warn(`[Supabase] Error sembrando ${tableName}:`, seedErr.message);
         }
@@ -104,21 +111,21 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
             ? applyMerge(fresh)
             : fresh;
 
-          setSbData(result);
-          prevRef.current = result;
+          commit(result);
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableName]);
 
   const setSupabaseData = useCallback(async (newDataOrFn) => {
     const prev    = prevRef.current;
     const newData = typeof newDataOrFn === 'function' ? newDataOrFn(prev) : newDataOrFn;
 
-    setSbData(newData);
-    prevRef.current = newData;
+    // Cachea de inmediato (optimista) para no perder cambios sin conexión
+    commit(newData);
 
     if (!readyRef.current) return;
 
@@ -138,7 +145,7 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
       const { error } = await supabase.from(tableName).delete().in('id', toDelete.map(d => d.id));
       if (error) console.error(`[Supabase] Error delete ${tableName}:`, error.message);
     }
-  }, [tableName]);
+  }, [tableName, commit]);
 
   if (!isConfigured) return [lsData, setLsData, false];
   return [sbData, setSupabaseData, loading];

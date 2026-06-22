@@ -60,7 +60,8 @@ export default function App() {
   // Si la URL NO tiene ?pos=1, el cliente ve solo la carta (sin acceso al sistema)
   const isStaffUrl = new URLSearchParams(window.location.search).has("pos");
   const [viewMode,  setViewMode]  = useState(isStaffUrl ? "staff" : "customer");
-  const [staffRole, setStaffRole] = useState("cajero");
+  // La sesión del personal se persiste: se mantiene aunque se recargue o se caiga internet
+  const [staffRole, setStaffRole] = useLocalStorage("carbon_cheddar_staff_role_v1", "cajero");
   const [staffTab,  setStaffTab]  = useState("sales");
 
   // Modal de PIN
