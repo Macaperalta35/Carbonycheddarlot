@@ -22,7 +22,8 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
     return r?.ingredients?.length || 0;
   };
 
-  const categories = ["Burgers", "Completos", "Sides", "Drinks", "Desserts"];
+  // Categorías reales tomadas del menú (evita forzar valores que no existen)
+  const categories = Array.from(new Set(menu.map(i => i.category))).filter(Boolean);
 
   // Filtrado de ítems
   const filteredItems = menu.filter(item => {
