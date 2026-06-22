@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import logoUrl from "../assets/logo.js";
+import InstallButton from "./InstallButton";
 
 const formatCLP = (v) =>
   new Intl.NumberFormat("es-CL", {
@@ -167,6 +168,11 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
           📸 @carbonycheddarlota
         </a>
       </header>
+
+      {/* Botón / banner para instalar la app (PWA) */}
+      <div className="cv-install-slot">
+        <InstallButton variant="banner" />
+      </div>
 
       {/* Sección de Pedido Online */}
       <section className="cv-section">

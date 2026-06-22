@@ -3847,6 +3847,8 @@ html.a11y-contrast .category-pill.active {
 /* ══════════════════════════════════════════════════
    PEDIDO ONLINE DEL CLIENTE
    ══════════════════════════════════════════════════ */
+.cv-install-slot { padding: 0 16px; }
+.cv-install-slot:empty { display: none; }
 /* Filtro de categorías */
 .cv-cat-scroll {
   display: flex;
