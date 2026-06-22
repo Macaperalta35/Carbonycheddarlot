@@ -191,7 +191,10 @@ export default function App() {
             />
           )}
           {staffTab === "inventory" && ["admin","superadmin"].includes(staffRole) && (
-            <InventoryView menu={menu} setMenu={setMenu} />
+            <InventoryView
+              menu={menu} setMenu={setMenu}
+              insumos={insumos} recetas={recetas} setRecetas={setRecetas}
+            />
           )}
           {staffTab === "insumos" && ["admin","superadmin"].includes(staffRole) && (
             <InsumosView menu={menu} insumos={insumos} setInsumos={setInsumos} recetas={recetas} setRecetas={setRecetas} />

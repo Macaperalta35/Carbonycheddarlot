@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function InventoryView({ menu, setMenu }) {
+export default function InventoryView({ menu, setMenu, insumos = [], recetas = [], setRecetas }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCritical, setFilterCritical] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -11,6 +11,16 @@ export default function InventoryView({ menu, setMenu }) {
   const [editStock, setEditStock] = useState(0);
   const [editDesc, setEditDesc] = useState("");
   const [editCategory, setEditCategory] = useState("");
+
+  // Receta del producto: líneas { insumoId, qty } (qty en la unidad del insumo)
+  const [recipeLines, setRecipeLines] = useState([]);
+  const canEditRecipe = typeof setRecetas === "function";
+
+  const insumoUnit = (id) => insumos.find(i => i.id === id)?.unit || "";
+  const recipeCount = (productId) => {
+    const r = recetas.find(x => String(x.id) === String(productId));
+    return r?.ingredients?.length || 0;
+  };
 
   const categories = ["Burgers", "Completos", "Sides", "Drinks", "Desserts"];
 
@@ -29,7 +39,14 @@ export default function InventoryView({ menu, setMenu }) {
     setEditStock(item.stock);
     setEditDesc(item.description || "");
     setEditCategory(item.category);
+    const existing = recetas.find(r => String(r.id) === String(item.id));
+    setRecipeLines(existing?.ingredients?.length ? existing.ingredients.map(x => ({ ...x })) : []);
   };
+
+  // Helpers de la receta
+  const addRecipeLine    = () => setRecipeLines([...recipeLines, { insumoId: "", qty: 1 }]);
+  const updateRecipeLine = (idx, field, value) => setRecipeLines(recipeLines.map((l, i) => i === idx ? { ...l, [field]: value } : l));
+  const removeRecipeLine = (idx) => setRecipeLines(recipeLines.filter((_, i) => i !== idx));
 
   const handleSaveEdit = (e) => {
     e.preventDefault();
@@ -53,6 +70,21 @@ export default function InventoryView({ menu, setMenu }) {
     });
 
     setMenu(updatedMenu);
+
+    // Guardar la receta del producto (materias primas que se descuentan al vender)
+    if (canEditRecipe) {
+      const ingredients = recipeLines
+        .filter(l => l.insumoId && Number(l.qty) > 0)
+        .map(l => ({ insumoId: l.insumoId, qty: Number(l.qty) }));
+      const record = { id: String(editingItem.id), productName: editName.trim(), ingredients };
+      const exists = recetas.find(r => String(r.id) === String(editingItem.id));
+      if (exists) {
+        setRecetas(recetas.map(r => String(r.id) === String(editingItem.id) ? record : r));
+      } else if (ingredients.length > 0) {
+        setRecetas([...recetas, record]);
+      }
+    }
+
     setEditingItem(null);
   };
 
@@ -148,6 +180,11 @@ export default function InventoryView({ menu, setMenu }) {
                     <td className="cell-name">
                       <strong>{item.name}</strong>
                       <p className="cell-desc-preview">{item.description}</p>
+                      {canEditRecipe && (
+                        recipeCount(item.id) > 0
+                          ? <span className="badge badge-success" style={{ fontSize: "0.65rem" }}>🧾 Receta: {recipeCount(item.id)}</span>
+                          : <span className="badge badge-warning" style={{ fontSize: "0.65rem" }}>Sin receta</span>
+                      )}
                     </td>
                     <td><span className="category-tag">{item.category}</span></td>
                     <td className="bold">{formatCLP(item.price)}</td>
@@ -244,13 +281,56 @@ export default function InventoryView({ menu, setMenu }) {
 
                 <div className="form-group">
                   <label htmlFor="edit-prod-desc">Descripción</label>
-                  <textarea 
+                  <textarea
                     id="edit-prod-desc"
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
                     rows="3"
                   />
                 </div>
+
+                {/* Receta: materias primas que se descuentan al vender este producto */}
+                {canEditRecipe && (
+                  <div className="form-group recipe-editor">
+                    <label>Receta · materias primas (se descuentan al vender)</label>
+                    {insumos.length === 0 ? (
+                      <p className="text-muted" style={{ fontSize: "0.82rem" }}>
+                        Aún no hay insumos. Créalos en la pestaña <strong>Insumos</strong> (puedes usar unidades kg, gr o unidad).
+                      </p>
+                    ) : (
+                      <>
+                        {recipeLines.map((l, idx) => (
+                          <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                            <select
+                              value={l.insumoId}
+                              onChange={(e) => updateRecipeLine(idx, "insumoId", e.target.value)}
+                              style={{ flex: 2 }}
+                            >
+                              <option value="">— Materia prima —</option>
+                              {insumos.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
+                            </select>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={l.qty}
+                              onChange={(e) => updateRecipeLine(idx, "qty", e.target.value)}
+                              placeholder="Cant."
+                              style={{ width: 90 }}
+                            />
+                            <span style={{ minWidth: 30, color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                              {insumoUnit(l.insumoId)}
+                            </span>
+                            <button type="button" className="btn-delete-row" onClick={() => removeRecipeLine(idx)}>🗑️</button>
+                          </div>
+                        ))}
+                        <button type="button" className="btn btn-secondary btn-xs" onClick={addRecipeLine}>
+                          + Agregar materia prima
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">
