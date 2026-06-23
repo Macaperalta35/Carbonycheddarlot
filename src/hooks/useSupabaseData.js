@@ -30,16 +30,19 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
     setLsData(data);
   }, [setLsData]);
 
-  // Merge de schema: el conjunto de productos lo define el código (initialData),
-  // pero para los productos que YA existen en la base de datos, los datos de la
-  // base mandan (nombre, precio, stock, etc.). Así las ediciones hechas desde el
-  // panel persisten, y el código sigue pudiendo agregar productos nuevos.
+  // Merge de schema: para los productos del código, los datos de la base mandan
+  // (nombre, precio, stock…), así las ediciones persisten. Además se incluyen los
+  // productos creados desde el panel que NO están en el código (DB-only), para que
+  // los productos agregados manualmente también persistan.
   const applyMerge = useCallback((rows) => {
-    const rowMap = new Map(rows.map(r => [String(r.id), r]));
-    return initialData.map(init => {
+    const rowMap  = new Map(rows.map(r => [String(r.id), r]));
+    const codeIds = new Set(initialData.map(i => String(i.id)));
+    const fromCode = initialData.map(init => {
       const dbRow = rowMap.get(String(init.id));
       return dbRow ? { ...init, ...dbRow } : init;
     });
+    const fromDbOnly = rows.filter(r => !codeIds.has(String(r.id)));
+    return [...fromCode, ...fromDbOnly];
   }, [initialData]);
 
   useEffect(() => {
@@ -60,22 +63,11 @@ export function useSupabaseData(tableName, localKey, initialData = [], options =
       if (rows && rows.length > 0) {
         if (mergeSchema && initialData.length > 0) {
           const rowMap      = new Map(rows.map(r => [String(r.id), r]));
-          const initIdSet   = new Set(initialData.map(i => String(i.id)));
           const merged      = applyMerge(rows);
 
-          // Eliminar ítems huérfanos (en DB pero no en initialData)
-          const toDelete = rows.filter(r => !initIdSet.has(String(r.id)));
-          if (toDelete.length > 0) {
-            await supabase.from(tableName).delete().in('id', toDelete.map(d => d.id));
-          }
-
-          // Upsert ítems nuevos o con metadata cambiada (excluye stock)
-          const toUpsert = merged.filter(item => {
-            const ex = rowMap.get(String(item.id));
-            if (!ex) return true;
-            const keys = Object.keys(item).filter(k => k !== 'stock');
-            return keys.some(k => JSON.stringify(item[k]) !== JSON.stringify(ex[k]));
-          });
+          // Sembrar en la base solo los productos del código que aún no existen
+          // (NO se borran huérfanos: los productos creados desde el panel se conservan)
+          const toUpsert = initialData.filter(item => !rowMap.has(String(item.id)));
           if (toUpsert.length > 0) {
             await supabase.from(tableName).upsert(toUpsert, { onConflict: 'id' });
           }

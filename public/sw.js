@@ -1,5 +1,5 @@
 // Service Worker — Carbon & Cheddar PWA
-const CACHE = 'cc-pwa-v6';
+const CACHE = 'cc-pwa-v7';
 
 // En install: pre-cachear la shell
 self.addEventListener('install', (e) => {

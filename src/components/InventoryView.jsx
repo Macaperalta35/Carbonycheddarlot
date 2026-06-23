@@ -11,6 +11,8 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
   const [editStock, setEditStock] = useState(0);
   const [editDesc, setEditDesc] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [isNew, setIsNew] = useState(false);
 
   // Receta del producto: líneas { insumoId, qty } (qty en la unidad del insumo)
   const [recipeLines, setRecipeLines] = useState([]);
@@ -34,14 +36,28 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
   });
 
   const handleOpenEdit = (item) => {
+    setIsNew(false);
     setEditingItem(item);
     setEditName(item.name);
     setEditPrice(item.price);
     setEditStock(item.stock);
     setEditDesc(item.description || "");
     setEditCategory(item.category);
+    setEditEmoji(item.emoji || "");
     const existing = recetas.find(r => String(r.id) === String(item.id));
     setRecipeLines(existing?.ingredients?.length ? existing.ingredients.map(x => ({ ...x })) : []);
+  };
+
+  const handleOpenNew = () => {
+    setIsNew(true);
+    setEditingItem({ id: null });
+    setEditName("");
+    setEditPrice("");
+    setEditStock(0);
+    setEditDesc("");
+    setEditCategory(categories[0] || "");
+    setEditEmoji("🍔");
+    setRecipeLines([]);
   };
 
   // Helpers de la receta
@@ -51,42 +67,44 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
 
   const handleSaveEdit = (e) => {
     e.preventDefault();
-    if (!editName.trim() || editPrice <= 0 || editStock < 0) {
-      alert("Por favor ingresa datos válidos.");
+    if (!editName.trim() || parseInt(editPrice) <= 0 || editStock < 0 || !editCategory.trim()) {
+      alert("Ingresa nombre, categoría, un precio mayor a 0 y stock válido.");
       return;
     }
 
-    const updatedMenu = menu.map(item => {
-      if (item.id === editingItem.id) {
-        return {
-          ...item,
-          name: editName.trim(),
-          price: parseInt(editPrice),
-          stock: parseInt(editStock),
-          description: editDesc.trim(),
-          category: editCategory
-        };
-      }
-      return item;
-    });
+    const fields = {
+      name: editName.trim(),
+      price: parseInt(editPrice),
+      stock: parseInt(editStock) || 0,
+      description: editDesc.trim(),
+      category: editCategory.trim(),
+      emoji: editEmoji.trim() || "🍔",
+    };
 
-    setMenu(updatedMenu);
+    let savedId = editingItem.id;
+    if (isNew) {
+      savedId = "prod-" + Date.now().toString(36) + Math.floor(Math.random() * 1000);
+      setMenu([...menu, { id: savedId, variants: [], ...fields }]);
+    } else {
+      setMenu(menu.map(item => item.id === editingItem.id ? { ...item, ...fields } : item));
+    }
 
     // Guardar la receta del producto (materias primas que se descuentan al vender)
     if (canEditRecipe) {
       const ingredients = recipeLines
         .filter(l => l.insumoId && Number(l.qty) > 0)
         .map(l => ({ insumoId: l.insumoId, qty: Number(l.qty) }));
-      const record = { id: String(editingItem.id), productName: editName.trim(), ingredients };
-      const exists = recetas.find(r => String(r.id) === String(editingItem.id));
+      const record = { id: String(savedId), productName: editName.trim(), ingredients };
+      const exists = recetas.find(r => String(r.id) === String(savedId));
       if (exists) {
-        setRecetas(recetas.map(r => String(r.id) === String(editingItem.id) ? record : r));
+        setRecetas(recetas.map(r => String(r.id) === String(savedId) ? record : r));
       } else if (ingredients.length > 0) {
         setRecetas([...recetas, record]);
       }
     }
 
     setEditingItem(null);
+    setIsNew(false);
   };
 
   const handleAddStockQuickly = (itemId, amount) => {
@@ -117,11 +135,14 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
         </div>
 
         {/* Indicador rápido de productos críticos */}
-        <div className="critical-summary">
+        <div className="critical-summary" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span>Críticos (&lt; 5 unidades):</span>
           <span className="badge badge-danger">
             {menu.filter(i => i.stock < 5).length} productos
           </span>
+          <button className="btn btn-primary btn-sm" onClick={handleOpenNew}>
+            ➕ Nuevo Producto
+          </button>
         </div>
       </div>
 
@@ -229,18 +250,31 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
       {editingItem && (
         <div className="modal-backdrop">
           <div className="modal-content inventory-edit-modal fade-in">
-            <h2>Editar Producto</h2>
+            <h2>{isNew ? "Nuevo Producto" : "Editar Producto"}</h2>
             <form onSubmit={handleSaveEdit}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label htmlFor="edit-prod-name">Nombre del Producto</label>
-                  <input 
-                    id="edit-prod-name"
-                    type="text" 
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    required
-                  />
+                <div className="modal-row-2" style={{ gridTemplateColumns: "80px 1fr" }}>
+                  <div className="form-group">
+                    <label htmlFor="edit-prod-emoji">Emoji</label>
+                    <input
+                      id="edit-prod-emoji"
+                      type="text"
+                      value={editEmoji}
+                      onChange={(e) => setEditEmoji(e.target.value)}
+                      maxLength={4}
+                      style={{ textAlign: "center", fontSize: "1.3rem" }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-prod-name">Nombre del Producto</label>
+                    <input
+                      id="edit-prod-name"
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="modal-row-2">
@@ -271,13 +305,18 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
 
                 <div className="form-group">
                   <label htmlFor="edit-prod-category">Categoría</label>
-                  <select 
+                  <input
                     id="edit-prod-category"
+                    type="text"
+                    list="cat-suggestions"
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
-                  >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                    placeholder="Ej: Hamburguesas, Bebidas..."
+                    required
+                  />
+                  <datalist id="cat-suggestions">
+                    {categories.map(c => <option key={c} value={c} />)}
+                  </datalist>
                 </div>
 
                 <div className="form-group">
@@ -335,11 +374,11 @@ export default function InventoryView({ menu, setMenu, insumos = [], recetas = [
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setEditingItem(null); setIsNew(false); }}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-success">
-                  Guardar Cambios
+                  {isNew ? "➕ Crear Producto" : "Guardar Cambios"}
                 </button>
               </div>
             </form>
