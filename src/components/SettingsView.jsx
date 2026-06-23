@@ -79,7 +79,7 @@ function PinChangeCard({ title, roleKey, icon, accentColor, pins, setPins }) {
   );
 }
 
-export default function SettingsView({ pins, setPins }) {
+export default function SettingsView({ pins, setPins, onlineOrdersEnabled = false, onToggleOnlineOrders }) {
   return (
     <div className="view-container">
       <div className="section-header">
@@ -88,6 +88,32 @@ export default function SettingsView({ pins, setPins }) {
           <p style={{ color: "var(--text-muted)", margin: 0 }}>
             Acceso exclusivo Super Admin — gestión de PINs y permisos
           </p>
+        </div>
+      </div>
+
+      {/* Pedidos online del cliente */}
+      <div className="settings-perms-section">
+        <h3 className="settings-section-title">Pedidos Online del Cliente</h3>
+        <div className="settings-card" style={{ borderLeftColor: onlineOrdersEnabled ? "#00e676" : "#9e9e9e" }}>
+          <div className="settings-card-header">
+            <span className="settings-card-icon" style={{ color: onlineOrdersEnabled ? "#00e676" : "#9e9e9e" }}>
+              {onlineOrdersEnabled ? "🟢" : "⚪"}
+            </span>
+            <div style={{ flex: 1 }}>
+              <h3>Pedidos online {onlineOrdersEnabled ? "ACTIVADOS" : "DESACTIVADOS"}</h3>
+              <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                {onlineOrdersEnabled
+                  ? "Los clientes pueden hacer pedidos desde la web para retirar."
+                  : "Los clientes solo ven la carta; no pueden hacer pedidos online."}
+              </p>
+            </div>
+            <button
+              className={`btn ${onlineOrdersEnabled ? "btn-danger" : "btn-success"}`}
+              onClick={onToggleOnlineOrders}
+            >
+              {onlineOrdersEnabled ? "Desactivar" : "Activar"}
+            </button>
+          </div>
         </div>
       </div>
 

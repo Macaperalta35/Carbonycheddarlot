@@ -102,6 +102,14 @@ CREATE TABLE IF NOT EXISTS public.recetas (
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ── TABLA: settings ───────────────────────────────────────────
+-- Configuración global del sistema (ej. activar/desactivar pedidos online).
+CREATE TABLE IF NOT EXISTS public.settings (
+  id          TEXT        PRIMARY KEY,
+  enabled     BOOLEAN     DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ================================================================
 -- SEGURIDAD: Row Level Security (RLS)
 -- Permite acceso completo con la anon key del proyecto.
@@ -114,6 +122,7 @@ ALTER TABLE public.egresos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.compras    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.insumos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recetas    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings   ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: acceso completo para la clave anónima
 DROP POLICY IF EXISTS "anon_all_menu_items" ON public.menu_items;
@@ -140,6 +149,10 @@ DROP POLICY IF EXISTS "anon_all_recetas" ON public.recetas;
 CREATE POLICY "anon_all_recetas" ON public.recetas
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "anon_all_settings" ON public.settings;
+CREATE POLICY "anon_all_settings" ON public.settings
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
 
 -- ================================================================
 -- TIEMPO REAL: Habilitar Realtime para sincronización entre
@@ -151,7 +164,7 @@ CREATE POLICY "anon_all_recetas" ON public.recetas
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['menu_items','orders','egresos','compras','insumos','recetas'] LOOP
+  FOREACH t IN ARRAY ARRAY['menu_items','orders','egresos','compras','insumos','recetas','settings'] LOOP
     IF NOT EXISTS (
       SELECT 1 FROM pg_publication_tables
       WHERE pubname = 'supabase_realtime'

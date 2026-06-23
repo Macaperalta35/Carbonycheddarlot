@@ -74,7 +74,7 @@ function CartaGaleria({ images, loading }) {
 }
 
 /* ── Vista principal del cliente ────────────────────── */
-export default function CustomerView({ menu = [], orders = [], setOrders, cartaImages = [], cartaLoading = false }) {
+export default function CustomerView({ menu = [], orders = [], setOrders, cartaImages = [], cartaLoading = false, ordersEnabled = false }) {
   const [activeCat, setActiveCat]   = useState("Todos");
   const [cart, setCart]             = useState([]);          // [{ id, name, price, emoji, qty }]
   const [cartOpen, setCartOpen]     = useState(false);
@@ -234,7 +234,22 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
         <InstallButton variant="banner" />
       </div>
 
+      {/* Banner cuando los pedidos online están desactivados */}
+      {!ordersEnabled && (
+        <section className="cv-coming-soon">
+          <div className="cv-coming-inner">
+            <span className="cv-coming-icon">🚀</span>
+            <div>
+              <h3>Pedidos Online</h3>
+              <p>Muy pronto podrás hacer tu pedido directamente desde aquí y retirarlo listo.</p>
+            </div>
+            <span className="cv-coming-badge">Próximamente</span>
+          </div>
+        </section>
+      )}
+
       {/* Sección de Pedido Online */}
+      {ordersEnabled && (
       <section className="cv-section">
         <h2 className="cv-section-title">Haz tu Pedido 🛍️</h2>
         <p className="cv-section-sub">Elige tus productos y retíralos en el local</p>
@@ -283,6 +298,7 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
           })}
         </div>
       </section>
+      )}
 
       {/* Carta de imágenes */}
       <section className="cv-section">
@@ -292,16 +308,18 @@ export default function CustomerView({ menu = [], orders = [], setOrders, cartaI
       </section>
 
       {/* Política de privacidad (Ley 19.628 / 21.719) */}
-      <section className="cv-section cv-privacy" id="cv-privacidad">
-        <h2 className="cv-section-title">Privacidad y datos</h2>
-        <p className="cv-privacy-text">
-          Carbon &amp; Cheddar recopila tu <strong>nombre, email y teléfono</strong> con el único
-          fin de gestionar y entregar tus pedidos. No compartimos tus datos con terceros con fines
-          publicitarios. Puedes solicitar acceder, rectificar o eliminar tus datos escribiéndonos al{" "}
-          <strong>+56 9 8417 0433</strong>. El tratamiento se realiza conforme a la Ley 19.628 y a la
-          Ley 21.719 de protección de datos personales de Chile.
-        </p>
-      </section>
+      {ordersEnabled && (
+        <section className="cv-section cv-privacy" id="cv-privacidad">
+          <h2 className="cv-section-title">Privacidad y datos</h2>
+          <p className="cv-privacy-text">
+            Carbon &amp; Cheddar recopila tu <strong>nombre, email y teléfono</strong> con el único
+            fin de gestionar y entregar tus pedidos. No compartimos tus datos con terceros con fines
+            publicitarios. Puedes solicitar acceder, rectificar o eliminar tus datos escribiéndonos al{" "}
+            <strong>+56 9 8417 0433</strong>. El tratamiento se realiza conforme a la Ley 19.628 y a la
+            Ley 21.719 de protección de datos personales de Chile.
+          </p>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="cv-footer">

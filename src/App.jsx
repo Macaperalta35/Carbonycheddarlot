@@ -47,6 +47,12 @@ export default function App() {
   const [compras, setCompras, comprasLoading] = useSupabaseData("compras",    "carbon_cheddar_compras_v1", [],          { orderBy: "timestamp" });
   const [insumos, setInsumos] = useSupabaseData("insumos", "carbon_cheddar_insumos_v1", initialInsumos, { orderBy: "name", orderAsc: true });
   const [recetas, setRecetas] = useSupabaseData("recetas", "carbon_cheddar_recetas_v1", []);
+  const [settings, setSettings] = useSupabaseData("settings", "carbon_cheddar_settings_v1", [{ id: "online_orders", enabled: false }], { orderBy: "id", orderAsc: true });
+
+  // Pedidos online: desactivados por defecto; el Super Admin los activa/desactiva
+  const onlineOrdersEnabled = settings.find(s => s.id === "online_orders")?.enabled ?? false;
+  const setOnlineOrdersEnabled = (val) =>
+    setSettings(prev => [...prev.filter(s => s.id !== "online_orders"), { id: "online_orders", enabled: val }]);
 
   // PINs configurables, guardados en localStorage
   const [pins, setPins] = useLocalStorage("carbon_cheddar_pins_v1", DEFAULT_PINS);
@@ -135,6 +141,7 @@ export default function App() {
           orders={orders} setOrders={setOrders}
           cartaImages={cartaImages}
           cartaLoading={cartaLoading}
+          ordersEnabled={onlineOrdersEnabled}
         />
       )}
 
@@ -226,7 +233,11 @@ export default function App() {
             />
           )}
           {staffTab === "settings" && staffRole === "superadmin" && (
-            <SettingsView pins={pins} setPins={setPins} />
+            <SettingsView
+              pins={pins} setPins={setPins}
+              onlineOrdersEnabled={onlineOrdersEnabled}
+              onToggleOnlineOrders={() => setOnlineOrdersEnabled(!onlineOrdersEnabled)}
+            />
           )}
         </>
       )}
