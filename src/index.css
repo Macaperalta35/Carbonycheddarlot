@@ -821,8 +821,11 @@ body {
   bottom: 0;
   background-color: rgba(0,0,0,0.7);
   display: flex;
-  align-items: center;
+  /* Anclar arriba y permitir scroll del overlay si el modal es muy alto */
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  padding: 24px 12px;
   z-index: 1000;
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
@@ -836,8 +839,9 @@ body {
   width: 90%;
   max-width: 480px;
   box-shadow: var(--shadow-lg);
-  /* Evita que un modal alto (ej. con receta) se salga de la pantalla */
-  max-height: 90vh;
+  margin: 0 auto;
+  /* El título queda arriba y el contenido hace scroll interno si no cabe */
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
 }
 
